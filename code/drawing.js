@@ -1,6 +1,15 @@
 "use strict";
-const canvas;
-const gl;
+
+var canvas;
+var gl;
+var program;
+
+
+/**
+ * Get canvas with webgl
+ * Load the shaders to the program
+ * @returns 
+ */
 async function init() {
     // Get a WebGL context
     canvas = document.getElementById("my-canvas");
@@ -12,45 +21,19 @@ async function init() {
     autoResizeCanvas(canvas);
 
     // Link the two shaders into a program
-    var program = createProgram(gl, vertexShader, fragmentShader);
-    var shaderDir = "./shaders/";
+    var shaderDir = "./code/shaders/";
     await utils.loadFiles([shaderDir + 'vs.glsl', shaderDir + 'fs.glsl'], function(shaderText) {
         var vertexShader = utils.createShader(gl, gl.VERTEX_SHADER, shaderText[0]);
         var fragmentShader = utils.createShader(gl, gl.FRAGMENT_SHADER, shaderText[1]);
         program = utils.createProgram(gl, vertexShader, fragmentShader);
     });
-}
 
-function createShader(gl, type, source) {
-    var shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-    if (success) {
-        return shader;
-    } else {
-        console.log(gl.getShaderInfoLog(shader)); // eslint-disable-line
-        gl.deleteShader(shader);
-        throw "could not compile shader:" + gl.getShaderInfoLog(shader);
-    }
 
+    gl.useProgram(program);
+    main();
 }
+window.onload = init;
 
-function createProgram(gl, vertexShader, fragmentShader) {
-    var program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (success) {
-        return program;
-    } else {
-        throw ("program filed to link:" + gl.getProgramInfoLog(program));
-        console.log(gl.getProgramInfoLog(program)); // eslint-disable-line
-        gl.deleteProgram(program);
-        return undefined;
-    }
-}
 
 function autoResizeCanvas(canvas) {
     const expandFullScreen = () => {
@@ -115,5 +98,3 @@ function main() {
     var count = 3;
     gl.drawArrays(primitiveType, offset, count);
 }
-
-window.onload = main;
