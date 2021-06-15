@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "lib": [ "es2015", "DOM" ],
+    "module": "ES2020",
+    "sourceMap" : true, 
+  },
+  "files": [
+      "./code/drawing.ts",
+      "./code/object.ts",
+  ]
+}
