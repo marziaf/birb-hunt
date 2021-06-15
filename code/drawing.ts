@@ -40,10 +40,7 @@ function drawScene(objects) {
     // TODO make work with animation
     let projectionMatrix = utils.identityMatrix(); // TODO change
     objects.forEach(obj => {
-        gl.useProgram(obj.program_shaders);
-        gl.uniformMatrix4fv(obj.matrix_glsl_location, false, utils.transposeMatrix(projectionMatrix));
-        gl.bindVertexArray(obj.vao);
-        gl.drawElements(gl.TRIANGLES, obj.numVertices, gl.UNSIGNED_SHORT, 0);
+        obj.draw(projectionMatrix);
     });
 }
 
@@ -59,13 +56,13 @@ async function printObj(obj_file_name) {
 async function main() {
     console.log("Program is running");
     printObj("assets/flower.obj");
+    let sceneTexture = "assets/Texture_01.jpg";
 
     console.assert(gl != null && program != null && typeof gl != 'undefined' && typeof program != 'undefined');
     var sceneObjects = new Array();
     var gl_pr = { gl: gl, pr: program };
-    var flower = new Entity("assets/flower.obj", gl_pr);
+    var flower = new Entity("assets/flower.obj", gl_pr, sceneTexture);
     await flower.create();
-    console.log("Got flower");
 
     sceneObjects[0] = flower;
 
