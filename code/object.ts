@@ -66,6 +66,26 @@ class Entity {
 
     }
 
+    _loadTexture() {
+        // create and bind texture
+        this.texture = this.gl.createTexture();
+        var image = new Image();
+        image.src = this.textureFile;
+        var gl = this.gl;
+        var texture = this.texture;
+
+        image.onload = function () {
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
+    }
+
     /**
      * Parse an obj file
      * @returns {promise} - the parsed object with all the data from the file
@@ -98,51 +118,52 @@ class Entity {
         return uvArray;
     }
 
+
     /**
-     * Get the indices to the coordinates of vertices, texture and normals
-     * @param {Array} faces - array of vertices indexes in the form of three indices {ivertex, itexture, inormal}
-     * @returns {Array} - 3 array of int representing the indices to vertices, uvcoord, normals
+     * Re-index to have a common index for each unique vertex
+     * @param faces 
+     * @param positionUnpacked 
+     * @param normalsUnpacked 
+     * @param uvUnpacked 
+     * @returns 
      */
-    _getIndicesArray(faces: Array<any>) {
-        var indVertices = new Array();
-        var indUV = new Array();
-        var indNorm = new Array();
-        var numVertices = 0;
+    _packFaces(faces: Array<any>, positionUnpacked: Array<Array<object>>, normalsUnpacked: Array<Array<object>>, uvUnpacked: Array<Array<object>>) {
+        var pos = [];
+        var norm = [];
+        var uv = [];
+        var indices = [];
+        var memory = new Map();
+        var uniqueVertCount = 0;
         faces.forEach(triang => {
             console.assert(typeof triang != 'undefined');
             triang.vertices.forEach(vertex => {
-                numVertices++;
-                indVertices.push(vertex.vertexIndex);
-                indUV.push(vertex.textureCoordsIndex);
-                indNorm.push(vertex.vertexNormalIndex);
+                let pi = vertex.vertexIndex - 1;
+                let ni = vertex.vertexNormalIndex - 1;
+                let ti = vertex.textureCoordsIndex - 1;
+                let tuple: any = { pi, ni, ti };
+                let inx = memory.get(tuple);
+                // if new vertex, insert
+                if (typeof inx == 'undefined') {
+                    let p: any = positionUnpacked[pi];
+                    let n: any = normalsUnpacked[pi];
+                    let t: any = uvUnpacked[pi];
+                    pos.push(p.x, p.y, p.z);
+                    norm.push(n.x, n.y, n.z);
+                    uv.push(t.u, t.v);
+                    indices.push(uniqueVertCount);
+                    memory[tuple] = uniqueVertCount;
+                    uniqueVertCount++;
+                }
+                // if already present, update only the indices vector
+                else {
+                    indices.push(inx);
+                }
             })
-
-        });
-
-        return { vert: indVertices, uv: indUV, norm: indNorm, num: numVertices };
+        })
+        return { pos, norm, uv, indices };
     }
 
 
-
-    _loadTexture() {
-        // create and bind texture
-        this.texture = this.gl.createTexture();
-        var image = new Image();
-        image.src = this.textureFile;
-        var gl = this.gl;
-        var texture = this.texture;
-
-        image.onload = function () {
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.generateMipmap(gl.TEXTURE_2D);
-        }
-    }
 
 
     /**
@@ -151,21 +172,15 @@ class Entity {
      */
     async _getVAO(): Promise<WebGLVertexArrayObject> {
         var data = await this._readObj();
-        console.assert(typeof data != 'undefined')
-        let verticesData = data.models[0].vertices;
-        console.assert(typeof verticesData != 'undefined')
+        let posData = data.models[0].vertices;
         let normalData = data.models[0].vertexNormals;
-        console.assert(typeof normalData != 'undefined')
         let uvData = data.models[0].textureCoords;
-        console.assert(typeof uvData != 'undefined')
         let indicesData = data.models[0].faces;
-        console.assert(typeof indicesData != 'undefined')
+        console.assert(typeof indicesData != 'undefined' && typeof uvData != 'undefined' &&
+            typeof normalData != 'undefined' && typeof posData != 'undefined' && typeof data != 'undefined');
 
-        let verticesArray = this._getCoordsArray(verticesData);
-        let normalsArray = this._getCoordsArray(normalData);
-        let uvArray = this._getUVArray(uvData);
-        let { vert: indVertices, uv: indUV, norm: indNorm, num: numVert } = this._getIndicesArray(indicesData);
-        this.numVertices = numVert;
+        let { pos, norm, uv, indices } = this._packFaces(indicesData, posData, normalData, uvData);
+
 
         // create and use the vertex array object for the current obj
         var vao = this.gl.createVertexArray();
@@ -175,37 +190,31 @@ class Entity {
         let posCoordBuffer = this.gl.createBuffer();
         let normCoordBuffer = this.gl.createBuffer();
         let uvCoordBuffer = this.gl.createBuffer();
-        let posIndBuffer = this.gl.createBuffer();
-        let normIndBuffer = this.gl.createBuffer();
-        let uvIndBuffer = this.gl.createBuffer();
+        let indBuffer = this.gl.createBuffer();
 
         // POSITION
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, posCoordBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(verticesArray), this.gl.STATIC_DRAW);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(pos), this.gl.STATIC_DRAW);
         this.gl.enableVertexAttribArray(this.position_glsl_location);
         this.gl.vertexAttribPointer(this.position_glsl_location, 3, this.gl.FLOAT, false, 0, 0);
-        //
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, posIndBuffer);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indVertices), this.gl.STATIC_DRAW);
 
         // NORMALS
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normCoordBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(normalsArray), this.gl.STATIC_DRAW);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(norm), this.gl.STATIC_DRAW);
         this.gl.enableVertexAttribArray(this.normals_glsl_location);
         this.gl.vertexAttribPointer(this.normals_glsl_location, 3, this.gl.FLOAT, false, 0, 0);
-        //
-        //this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, normIndBuffer);
-        //this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indNorm), this.gl.STATIC_DRAW);
 
         // UV
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvCoordBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(uvArray), this.gl.STATIC_DRAW);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(uv), this.gl.STATIC_DRAW);
         this.gl.enableVertexAttribArray(this.uv_glsl_location);
         this.gl.vertexAttribPointer(this.uv_glsl_location, 2, this.gl.FLOAT, false, 0, 0);
-        //
-        //this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, uvIndBuffer);
-        //this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indUV), this.gl.STATIC_DRAW);
 
+        // INDICES
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.gl.STATIC_DRAW);
+
+        this.numVertices = indices.length;
 
         return vao;
     }
