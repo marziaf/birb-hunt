@@ -6,6 +6,7 @@
   },
   "files": [
       "./code/drawing.ts",
-      "./code/object.ts",
+      "./code/structures/object.ts",
+      "./code/structures/scene_graph.ts",
   ]
 }

@@ -1,13 +1,13 @@
 "use strict";
 
 // npx tsc -watch
-import { Entity } from "./object.js"
+import { Entity } from "./structures/object.js"
 import { utils } from "./libs/utils.js"
+import { SceneGraphNode } from "./structures/scene_graph.js";
 
 var gl: WebGL2RenderingContext;
 var program: WebGLProgram;
 var canvas: HTMLCanvasElement;
-
 
 /**
  * Get canvas with webgl
@@ -31,10 +31,11 @@ async function init() {
 }
 window.onload = init;
 
-// TODO modify this
+
 var lastUpdateTime = 0;
 var rot = 0;
-function animate() {
+
+function camera() { //TODO
     var currentTime = (new Date).getTime();
     if (lastUpdateTime) {
         var deltaC = (30 * (currentTime - lastUpdateTime)) / 1000.0;
@@ -46,15 +47,22 @@ function animate() {
     // fix the ratio of the objects wrt the scene
     let objectSceneRatio = 500 / canvas.width;
     let windowRatioCorrection = utils.MakeScaleNuMatrix(objectSceneRatio, aspectRatio * objectSceneRatio, objectSceneRatio);
-    return utils.multiplyMatrices(windowRatioCorrection, utils.MakeWorld(0.0, 0.0, 0.0, 90, -30, 0.0, 1));
+    return utils.multiplyMatrices(windowRatioCorrection, utils.MakeWorld(0.0, 0.0, 0.0, rot, -30, 0.0, 1)); // TODO
 }
 
+
+function drawGraph(node: SceneGraphNode) {
+    if (!node.isDummy()) {
+        node.entity.draw(utils.multiplyMatrices(node.getWorldMatrix(), camera()));
+    }
+    node.getChildren().forEach(child => drawGraph(child));
+}
 
 /**
  * Draw the objects on scene
  * @param {Array<Entity>} - array of objects to draw on scene 
  */
-function drawScene(objects) {
+function drawScene(root: SceneGraphNode) {
 
     utils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -63,26 +71,21 @@ function drawScene(objects) {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
 
-    let projectionMatrix = animate(); // TODO change
-    objects.forEach(obj => {
-        obj.draw(projectionMatrix);
-    });
-    window.requestAnimationFrame(() => drawScene(objects));
+    drawGraph(root);
+    window.requestAnimationFrame(() => drawScene(root));
 }
 
 
 async function main() {
     // Texture image for the objects
     let sceneTexture = "assets/Texture_01.jpg";
-    console.assert(gl != null && program != null && typeof gl != 'undefined' && typeof program != 'undefined');
-
-    var sceneObjects = new Array();
     var gl_pr = { gl: gl, pr: program };
 
-    var flower = new Entity("assets/flower.obj", gl_pr, sceneTexture);
-    await flower.create();
+    // Create the scene tree
+    let root = new SceneGraphNode(null, "root");
+    let flower = new SceneGraphNode(new Entity("assets/flower.obj", gl_pr, sceneTexture), "flower");
+    flower.setParent(root);
+    await flower.entity.create();
 
-    sceneObjects[0] = flower;
-
-    drawScene(sceneObjects);
+    drawScene(root);
 }

@@ -1,8 +1,8 @@
 /**
  * Contains useful data for an object of the scene
  */
-import { OBJFile } from './libs/obj-parser.js';
-import { utils } from "./libs/utils.js"
+import { OBJFile } from '../libs/obj-parser.js';
+import { utils } from "../libs/utils.js"
 
 class Entity {
     // files
