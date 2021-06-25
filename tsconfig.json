@@ -8,5 +8,6 @@
       "./code/drawing.ts",
       "./code/structures/object.ts",
       "./code/structures/scene_graph.ts",
+      "./code/movement/camera_movement.ts"
   ]
 }

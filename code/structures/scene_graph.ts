@@ -40,7 +40,7 @@ class SceneGraphNode {
         this._parent = parent;
     };
 
-    updateWorldMatrix(matrix: Array<number>) {
+    updateWorldMatrix(matrix: Array<number> = null) {
         if (matrix) {
             // a matrix was passed in so do the math
             this._worldMatrix = utils.multiplyMatrices(matrix, this._localMatrix);

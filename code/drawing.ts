@@ -4,10 +4,14 @@
 import { Entity } from "./structures/object.js"
 import { utils } from "./libs/utils.js"
 import { SceneGraphNode } from "./structures/scene_graph.js";
+import { Camera } from "./movement/camera_movement.js";
 
 var gl: WebGL2RenderingContext;
 var program: WebGLProgram;
 var canvas: HTMLCanvasElement;
+var camera: Camera;
+var transformWorldMatrix: Array<number>;
+var lastUpdateTime = 0;
 
 /**
  * Get canvas with webgl
@@ -32,28 +36,14 @@ async function init() {
 window.onload = init;
 
 
-var lastUpdateTime = 0;
-var rot = 0;
-
-function camera() { //TODO
-    var currentTime = (new Date).getTime();
-    if (lastUpdateTime) {
-        var deltaC = (30 * (currentTime - lastUpdateTime)) / 1000.0;
-        rot += deltaC;
-    }
-    lastUpdateTime = currentTime;
-    // keep the ratio of the objects' height and width constant
-    let aspectRatio = canvas.width / canvas.height;
-    // fix the ratio of the objects wrt the scene
-    let objectSceneRatio = 500 / canvas.width;
-    let windowRatioCorrection = utils.MakeScaleNuMatrix(objectSceneRatio, aspectRatio * objectSceneRatio, objectSceneRatio);
-    return utils.multiplyMatrices(windowRatioCorrection, utils.MakeWorld(0.0, 0.0, 0.0, rot, -30, 0.0, 1)); // TODO
-}
-
-
+/**
+ * Recursively draw all the nodes of the graph
+ * @param node 
+ */
 function drawGraph(node: SceneGraphNode) {
     if (!node.isDummy()) {
-        node.entity.draw(utils.multiplyMatrices(node.getWorldMatrix(), camera()));
+        let WVP = utils.multiplyMatrices(transformWorldMatrix, node.getWorldMatrix());
+        node.entity.draw(WVP);
     }
     node.getChildren().forEach(child => drawGraph(child));
 }
@@ -64,12 +54,20 @@ function drawGraph(node: SceneGraphNode) {
  */
 function drawScene(root: SceneGraphNode) {
 
+    // Get the delta time
+    var currentTime = (new Date).getTime();
+    var deltaT = currentTime - lastUpdateTime / 1000.0;
+    lastUpdateTime = currentTime;
+
+    // get the projection matrix, already inverted
+    transformWorldMatrix = camera.getNewCameraMatrixInv(deltaT);
+
     utils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
+    //gl.enable(gl.CULL_FACE);
 
     drawGraph(root);
     window.requestAnimationFrame(() => drawScene(root));
@@ -81,11 +79,16 @@ async function main() {
     let sceneTexture = "assets/Texture_01.jpg";
     var gl_pr = { gl: gl, pr: program };
 
+    // Get the camera
+    let aspectRatio = canvas.width / canvas.height;
+    camera = new Camera();
+    camera.setCameraParameters(90, aspectRatio, 0.1, 2000);
     // Create the scene tree
     let root = new SceneGraphNode(null, "root");
     let flower = new SceneGraphNode(new Entity("assets/flower.obj", gl_pr, sceneTexture), "flower");
     flower.setParent(root);
     await flower.entity.create();
+    root.updateWorldMatrix();
 
     drawScene(root);
 }
