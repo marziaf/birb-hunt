@@ -32,16 +32,38 @@ async function init() {
 }
 window.onload = init;
 
+// TODO modify this
+var lastUpdateTime = 0;
+var rot = 0;
+function animate() {
+    var currentTime = (new Date).getTime();
+    if (lastUpdateTime) {
+        var deltaC = (30 * (currentTime - lastUpdateTime)) / 1000.0;
+        rot += deltaC;
+    }
+    lastUpdateTime = currentTime;
+    return utils.MakeWorld(0.0, 0.0, 0.0, rot, -30, 0.0, 2.0);
+}
+
+
 /**
  * Draw the objects on scene
  * @param {Array<Entity>} - array of objects to draw on scene 
  */
 function drawScene(objects) {
-    // TODO make work with animation
-    let projectionMatrix = utils.identityMatrix(); // TODO change
+
+    utils.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    //gl.enable(gl.CULL_FACE);
+
+    let projectionMatrix = animate(); // TODO change
     objects.forEach(obj => {
         obj.draw(projectionMatrix);
     });
+    window.requestAnimationFrame(() => drawScene(objects));
 }
 
 // TODO DELETE
