@@ -60,10 +60,6 @@ class Entity {
         // bind obj vao and draw
         this.gl.bindVertexArray(this.vao);
         this.gl.drawElements(this.gl.TRIANGLES, this.numVertices, this.gl.UNSIGNED_SHORT, 0);
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-        this.gl.uniform1i(this.texture_glsl_location, 0);
-
     }
 
     _loadTexture() {
@@ -73,16 +69,14 @@ class Entity {
         image.src = this.textureFile;
         var gl = this.gl;
         var texture = this.texture;
-
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        //gl.generateMipmap(gl.TEXTURE_2D);
         image.onload = function () {
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.generateMipmap(gl.TEXTURE_2D);
         }
     }
 
@@ -95,28 +89,6 @@ class Entity {
         const objFile = new OBJFile(obj_data);
         return objFile.parse();
     };
-
-    /**
-     * Put the vertices in an array of floats
-     * @param {Array<{x,y,z}>} vertices - array of vertices in the form {x:..., y:..., z:...}
-     * @returns {Array} - an array of floats representing the vertices coordinates
-     */
-    _getCoordsArray(coords: Array<any>): Array<number> {
-        var coordArray = new Array();
-        coords.forEach(coord => {
-            console.assert(typeof coord != 'undefined');
-            coordArray.push(coord.x, coord.y, coord.z);
-        });
-        return coordArray;
-    }
-    _getUVArray(uv: Array<any>): Array<number> {
-        var uvArray = new Array();
-        uv.forEach(coord => {
-            console.assert(typeof coord != 'undefined');
-            uvArray.push(coord.u, coord.v);
-        });
-        return uvArray;
-    }
 
 
     /**
@@ -147,8 +119,8 @@ class Entity {
                     let p: any = positionUnpacked[pi];
                     let n: any = normalsUnpacked[pi];
                     let t: any = uvUnpacked[pi];
-                    pos.push(p.x, p.y, p.z);
-                    norm.push(n.x, n.y, n.z);
+                    pos.push(p.z, p.y, p.x);
+                    norm.push(n.z, n.y, n.x);
                     uv.push(t.u, t.v);
                     indices.push(uniqueVertCount);
                     memory[tuple] = uniqueVertCount;
@@ -180,7 +152,6 @@ class Entity {
             typeof normalData != 'undefined' && typeof posData != 'undefined' && typeof data != 'undefined');
 
         let { pos, norm, uv, indices } = this._packFaces(indicesData, posData, normalData, uvData);
-
 
         // create and use the vertex array object for the current obj
         var vao = this.gl.createVertexArray();

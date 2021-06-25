@@ -3,10 +3,10 @@
 // npx tsc -watch
 import { Entity } from "./object.js"
 import { utils } from "./libs/utils.js"
-import { OBJFile } from "./libs/obj-parser.js"
 
 var gl: WebGL2RenderingContext;
-var program;
+var program: WebGLProgram;
+var canvas: HTMLCanvasElement;
 
 
 /**
@@ -15,9 +15,8 @@ var program;
  * @returns 
  */
 async function init() {
-    console.log("Running init");
     // Get a WebGL context
-    let canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("my-canvas");
+    canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
     gl = canvas.getContext("webgl2");
     if (!gl) {
         alert("GL context not opened");
@@ -42,7 +41,12 @@ function animate() {
         rot += deltaC;
     }
     lastUpdateTime = currentTime;
-    return utils.MakeWorld(0.0, 0.0, 0.0, rot, -30, 0.0, 2.0);
+    // keep the ratio of the objects' height and width constant
+    let aspectRatio = canvas.width / canvas.height;
+    // fix the ratio of the objects wrt the scene
+    let objectSceneRatio = 500 / canvas.width;
+    let windowRatioCorrection = utils.MakeScaleNuMatrix(objectSceneRatio, aspectRatio * objectSceneRatio, objectSceneRatio);
+    return utils.multiplyMatrices(windowRatioCorrection, utils.MakeWorld(0.0, 0.0, 0.0, 90, -30, 0.0, 1));
 }
 
 
@@ -57,7 +61,7 @@ function drawScene(objects) {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
-    //gl.enable(gl.CULL_FACE);
+    gl.enable(gl.CULL_FACE);
 
     let projectionMatrix = animate(); // TODO change
     objects.forEach(obj => {
@@ -66,23 +70,15 @@ function drawScene(objects) {
     window.requestAnimationFrame(() => drawScene(objects));
 }
 
-// TODO DELETE
-
-async function printObj(obj_file_name) {
-    var obj_data = await fetch(obj_file_name).then(response => response.text()).then(data => { return data });
-    const objFile = new OBJFile(obj_data);
-    console.log(objFile.parse());
-};
-
 
 async function main() {
-    console.log("Program is running");
-    printObj("assets/flower.obj");
+    // Texture image for the objects
     let sceneTexture = "assets/Texture_01.jpg";
-
     console.assert(gl != null && program != null && typeof gl != 'undefined' && typeof program != 'undefined');
+
     var sceneObjects = new Array();
     var gl_pr = { gl: gl, pr: program };
+
     var flower = new Entity("assets/flower.obj", gl_pr, sceneTexture);
     await flower.create();
 
