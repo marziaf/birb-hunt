@@ -56,11 +56,11 @@ function drawScene(root: SceneGraphNode) {
 
     // Get the delta time
     var currentTime = (new Date).getTime();
-    var deltaT = currentTime - lastUpdateTime / 1000.0;
+    var deltaT = (currentTime - lastUpdateTime) / 1000.0;
     lastUpdateTime = currentTime;
 
     // get the projection matrix, already inverted
-    transformWorldMatrix = camera.getNewCameraMatrixInv(deltaT);
+    transformWorldMatrix = camera.getViewProjectionMatrix(deltaT);
 
     utils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -82,7 +82,7 @@ async function main() {
     // Get the camera
     let aspectRatio = canvas.width / canvas.height;
     camera = new Camera();
-    camera.setCameraParameters(90, aspectRatio, 0.1, 2000);
+    camera.setCameraParameters(-220, aspectRatio, 0.1, 2000);
     // Create the scene tree
     let root = new SceneGraphNode(null, "root");
     let flower = new SceneGraphNode(new Entity("assets/flower.obj", gl_pr, sceneTexture), "flower");

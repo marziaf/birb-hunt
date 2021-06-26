@@ -1,13 +1,23 @@
 {
   "compilerOptions": {
     "lib": [ "es2015", "DOM" ],
-    "module": "ES2020",
+    "module": "es2020",
     "sourceMap" : true, 
+    "moduleResolution" : "node",
+    "paths": {
+      "quaternion" : ["./node_modules/quaternion"]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports":true
   },
+  "include": [
+    "./code/quaternion.d.ts",
+  ],
   "files": [
       "./code/drawing.ts",
       "./code/structures/object.ts",
       "./code/structures/scene_graph.ts",
-      "./code/movement/camera_movement.ts"
+      "./code/movement/camera_movement.ts",
+      "./code/quaternion.d.ts",
   ]
 }

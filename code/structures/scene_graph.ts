@@ -45,7 +45,7 @@ class SceneGraphNode {
             // a matrix was passed in so do the math
             this._worldMatrix = utils.multiplyMatrices(matrix, this._localMatrix);
         } else {
-            // no matrix was passed in so just copy.
+            // no matrix was passed in so just copy
             utils.copy(this._localMatrix, this._worldMatrix);
         }
         // now process all the children
