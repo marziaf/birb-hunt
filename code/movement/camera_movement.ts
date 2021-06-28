@@ -2,21 +2,22 @@ import { utils } from '../libs/utils.js';
 
 class Camera {
     // Keep track of position and orientation
+    private _canvas: HTMLCanvasElement;
     private _translation: { x: number, y: number, z: number };
     private _angles: { direction: number, elevation: number };
     private _deltaTime: number;
     // Movement settings
     private _translationSpeed: number;
     private _rotationSpeed: { x: number, y: number };
-    private _lastCursorPosition: { x: number, y: number };
     private _elevationBoundaries: { low: number, high: number };
     // Camera perspective
     private _perspectiveMatrix: Array<number>;
 
-    constructor(height: number = 2, translationSpeed: number = 5, rotationSpeed = { x: 30, y: 30 }) {
+    constructor(canvas: HTMLCanvasElement, height: number = 2, translationSpeed: number = 5, rotationSpeed = { x: 30, y: 30 }) {
+        this._canvas = canvas;
         this._translationSpeed = translationSpeed;
         this._rotationSpeed = rotationSpeed;
-        this._translation = { x: 0, y: height, z: 1 };
+        this._translation = { x: 0, y: height, z: 0 };
         this._angles = { direction: 0, elevation: 0 };
         this.setCameraParameters(-200, 1, 0.1, 2000);
         this._elevationBoundaries = { low: -40, high: 80 };
@@ -31,8 +32,12 @@ class Camera {
      * Deal with key press and muose movement
      */
     private _initInteraction() {
+
+        this._canvas.onclick = this._canvas.requestPointerLock;
+
         window.addEventListener("keydown", keyFunction.bind(this));
         window.addEventListener("mousemove", pointerFunction.bind(this));
+
         function keyFunction(e) {
             let deltaLinearSpace = this._deltaTime * this._translationSpeed;
             // move according to current camera direction, considering the angle wrt z axis (rotation on y)
@@ -56,28 +61,17 @@ class Camera {
 
             this._translation.x -= Math.sin(movementAngle) * deltaLinearSpace;
             this._translation.z -= Math.cos(movementAngle) * deltaLinearSpace;
-            console.log(movementAngle);
-
         }
 
+
         function pointerFunction(e) {
-            let xc = e.screenX;
-            let yc = e.screenY;
-            if (this._lastCursorPosition == null || this._lastCursorPosition.x == null || this._lastCursorPosition.y == null) {
-                this._lastCursorPosition = { x: xc, y: yc };
-            }
-
             let deltaRotation = {
-                x: (this._lastCursorPosition.x - xc) * this._deltaTime * this._rotationSpeed.x,
-                y: (this._lastCursorPosition.y - yc) * this._deltaTime * this._rotationSpeed.y
+                x: e.movementX * this._deltaTime * this._rotationSpeed.x,
+                y: e.movementY * this._deltaTime * this._rotationSpeed.y
             };
-
-            this._lastCursorPosition = { x: xc, y: yc };
-
             this._angles.direction += deltaRotation.x;
             // Clamp elevation
             this._angles.elevation = Math.max(this._elevationBoundaries.low, Math.min(this._angles.elevation + deltaRotation.y, this._elevationBoundaries.high));
-
         }
     }
 
