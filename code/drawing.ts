@@ -5,13 +5,20 @@ import { Entity } from "./structures/object.js"
 import { utils } from "./libs/utils.js"
 import { SceneGraphNode } from "./structures/scene_graph.js";
 import { Camera } from "./movement/camera_movement.js";
+import { Skybox } from './structures/skybox.js'
+import * as mov from "./movement/scene_object_movement.js"
 
 var gl: WebGL2RenderingContext;
-var program: WebGLProgram;
+var objectProgram: WebGLProgram;
+var skyboxProgram: WebGLProgram;
 var canvas: HTMLCanvasElement;
 var camera: Camera;
 var transformWorldMatrix: Array<number>;
 var lastUpdateTime = 0;
+
+var sky: Skybox;
+
+
 
 /**
  * Get canvas with webgl
@@ -30,7 +37,8 @@ async function init() {
     // Link the two shaders into a program
 
     let shaderDir: string = "http://127.0.0.1/birb_hunt/code/shaders/";
-    program = await utils.createAndCompileShaders(gl, [shaderDir + 'vs.glsl', shaderDir + 'fs.glsl']);
+    objectProgram = await utils.createAndCompileShaders(gl, [shaderDir + 'vs.glsl', shaderDir + 'fs.glsl']);
+    skyboxProgram = await utils.createAndCompileShaders(gl, [shaderDir + 'skybox_vs.glsl', shaderDir + 'skybox_fs.glsl']);
     main();
 }
 window.onload = init;
@@ -59,16 +67,21 @@ function drawScene(root: SceneGraphNode) {
     var deltaT = (currentTime - lastUpdateTime) / 1000.0;
     lastUpdateTime = currentTime;
 
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    /*
+    gl.clearColor(0, 0, 0, 0);
+    //gl.enable(gl.CULL_FACE);
+    */
+
     // get the projection matrix, already inverted
     transformWorldMatrix = camera.getViewProjectionMatrix(deltaT);
 
     utils.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-    //gl.enable(gl.CULL_FACE);
 
+    // draw
+    sky.draw(transformWorldMatrix);
     drawGraph(root);
     window.requestAnimationFrame(() => drawScene(root));
 }
@@ -76,16 +89,21 @@ function drawScene(root: SceneGraphNode) {
 
 async function main() {
     // Texture image for the objects
-    let sceneTexture = "assets/Texture_01.jpg";
-    var gl_pr = { gl: gl, pr: program };
+    let sceneTexture = "./assets/scene_objects/Texture_01.jpg";
+    var gl_pr = { gl: gl, pr: objectProgram };
 
     // Get the camera
     let aspectRatio = canvas.width / canvas.height;
     camera = new Camera();
-    camera.setCameraParameters(-220, aspectRatio, 0.1, 2000);
+    camera.setCameraParameters(40, aspectRatio, 0.1, 2000);
+
+    // Create the skybox
+    sky = new Skybox('./assets/skyboxes/', gl, skyboxProgram,
+        'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
+
     // Create the scene tree
     let root = new SceneGraphNode(null, "root");
-    let flower = new SceneGraphNode(new Entity("assets/flower.obj", gl_pr, sceneTexture), "flower");
+    let flower = new SceneGraphNode(new Entity("./assets/scene_objects/flower.obj", gl_pr, sceneTexture), "flower");
     flower.setParent(root);
     await flower.entity.create();
     root.updateWorldMatrix();

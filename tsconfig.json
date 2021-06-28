@@ -17,7 +17,9 @@
       "./code/drawing.ts",
       "./code/structures/object.ts",
       "./code/structures/scene_graph.ts",
+      "./code/structures/skybox.ts",
       "./code/movement/camera_movement.ts",
+      "./code/movement/scene_object_movement.ts",
       "./code/quaternion.d.ts",
   ]
 }

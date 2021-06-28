@@ -55,6 +55,10 @@ class SceneGraphNode {
         });
     };
 
+    setLocalMatrix(matrix: Array<number>) {
+        this._localMatrix = matrix;
+    }
+
     // world matrix: local -> global
     getWorldMatrix() {
         return this._worldMatrix;
