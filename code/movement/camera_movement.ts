@@ -78,10 +78,10 @@ class Camera {
             x--;
         }
 
-        let movementAngle = Math.atan2(z, x);
+        let resAngle = Math.atan2(x, -z) + this._angles.direction * Math.PI / 180;
 
-        this._translation.x += Math.sin(movementAngle) * deltaLinearSpace;
-        this._translation.z += Math.cos(movementAngle) * deltaLinearSpace;
+        this._translation.x += Math.sin(resAngle) * deltaLinearSpace;
+        this._translation.z += Math.cos(resAngle) * deltaLinearSpace;
     }
 
     /**
