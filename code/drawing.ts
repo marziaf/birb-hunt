@@ -19,7 +19,6 @@ var lastUpdateTime = 0;
 var sky: Skybox;
 
 
-
 /**
  * Get canvas with webgl
  * Load the shaders
@@ -86,11 +85,6 @@ async function setupEnvironment() {
     let sceneTexture = "./assets/scene_objects/Texture_01.jpg";
     let objFileDir = "./assets/scene_objects/";
 
-    // Get the camera
-    let aspectRatio = canvas.width / canvas.height;
-    camera = new Camera(canvas);
-    camera.setCameraParameters(40, aspectRatio, 0.1, 2000);
-
     // Create the skybox
     sky = new Skybox('./assets/skyboxes/', gl, skyboxProgram,
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
@@ -112,6 +106,12 @@ async function setupEnvironment() {
     mov.initLocalPosition(nodes["flower"], 2, 0, 2);
     mov.initLocalPosition(nodes["tree1"], 1, 0, 1);
     root.updateWorldMatrix();
+
+    // Get the camera
+    // create after the others to avoid problems with early event interception
+    let aspectRatio = canvas.width / canvas.height;
+    camera = new Camera(canvas);
+    camera.setCameraParameters(40, aspectRatio, 0.1, 2000);
 
     return root;
 }

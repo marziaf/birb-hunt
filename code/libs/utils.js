@@ -28,10 +28,6 @@ var utils = {
     },
 
 
-
-
-
-
     //*** SHADERS UTILS	
     /*Function to load a shader's code, compile it and return the handle to it
     Requires:
