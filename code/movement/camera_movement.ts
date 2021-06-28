@@ -18,7 +18,7 @@ class Camera {
         this._rotationSpeed = rotationSpeed;
         this._translation = { x: 0, y: height, z: 1 };
         this._angles = { direction: 0, elevation: 0 };
-        this.setCameraParameters(80, 1, 0.1, 2000);
+        this.setCameraParameters(-200, 1, 0.1, 2000);
         this._elevationBoundaries = { low: -40, high: 80 };
         this._initInteraction();
     }
@@ -92,7 +92,7 @@ class Camera {
         let view = utils.MakeView(this._translation.x, this._translation.y, this._translation.z, this._angles.elevation, this._angles.direction);
 
         let viewProjection = utils.multiplyMatrices(this._perspectiveMatrix, view);
-        return utils.invertMatrix(viewProjection);
+        return viewProjection;
     }
 }
 export { Camera };

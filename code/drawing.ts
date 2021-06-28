@@ -81,8 +81,9 @@ function drawScene(root: SceneGraphNode) {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     // draw
-    sky.draw(transformWorldMatrix);
+    sky.draw(utils.invertMatrix(transformWorldMatrix));
     drawGraph(root);
+
     window.requestAnimationFrame(() => drawScene(root));
 }
 
