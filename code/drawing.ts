@@ -17,6 +17,7 @@ var transformWorldMatrix: Array<number>;
 var lastUpdateTime = 0;
 
 var sky: Skybox;
+var root: SceneGraphNode;
 
 
 /**
@@ -39,6 +40,8 @@ async function init() {
         gl, [shaderDir + 'vs.glsl', shaderDir + 'fs.glsl']);
     skyboxProgram = await utils.createAndCompileShaders(
         gl, [shaderDir + 'skybox_vs.glsl', shaderDir + 'skybox_fs.glsl']);
+    // create scene
+    root = await setupEnvironment();
     main();
 }
 window.onload = init;
@@ -90,21 +93,34 @@ async function setupEnvironment() {
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
 
     // Create the possible objects to insert in the scene
-    let objectNames = ["flower", "plant", "rock1", "rock2", "rock3",
-        "smallrock", "stump", "tree1", "tree2", "tree3", "tree4"];
-    let nodes = new Map;
-    for (const name of objectNames) {
-        let obj = new Entity(objFileDir + name + ".obj", { gl: gl, pr: objectProgram }, sceneTexture);
-        await obj.create();
-        nodes[name] = new SceneGraphNode(obj, name);
-    };
+    let objectNamesQtys = [{ name: "flower", qty: 10 }, { name: "plant", qty: 20 },
+    { name: "rock1", qty: 1 }, { name: "rock2", qty: 1 }, { name: "rock3", qty: 1 },
+    { name: "smallrock", qty: 5 }, { name: "stump", qty: 3 }, { name: "tree1", qty: 10 },
+    { name: "tree2", qty: 10 }, { name: "tree3", qty: 10 }, { name: "tree4", qty: 10 }];
 
-    // Create the scene tree
+    // Create the scene graph
+    // root
     let root = new SceneGraphNode(null, "root");
-    nodes["flower"].setParent(root);
-    nodes["tree1"].setParent(root);
-    mov.initLocalPosition(nodes["flower"], 2, 0, 2);
-    mov.initLocalPosition(nodes["tree1"], 1, 0, 1);
+    // grass
+    let grassLevel = new SceneGraphNode(null, "grassLevel");
+    grassLevel.setParent(root);
+    let grass = new Entity(objFileDir + 'grass.obj', { gl: gl, pr: objectProgram }, sceneTexture);
+    await grass.create();
+    let grassNode = new SceneGraphNode(grass, "grass");
+    grassNode.setParent(root);
+    mov.initLocalPosition(grassNode, 0, 0, 0, 0, 0, 0, 5);
+    // objects on grass
+    for (const { name, qty } of objectNamesQtys) {
+        for (let i = 0; i < qty; i++) {
+            let obj = new Entity(objFileDir + name + ".obj", { gl: gl, pr: objectProgram }, sceneTexture);
+            await obj.create();
+            let node = new SceneGraphNode(obj, name + i);
+            node.setParent(grassLevel);
+            mov.initLocalPosition(node,
+                Math.random() * Math.sign(Math.random() - 0.5) * 40, 0, Math.random() * Math.sign(Math.random() - 0.5) * 40, // translation
+                Math.random() * Math.random() * 360, 0, 0, 1); // rotation
+        }
+    };
     root.updateWorldMatrix();
 
     // Get the camera
@@ -116,8 +132,7 @@ async function setupEnvironment() {
     return root;
 }
 
-async function main() {
-    let root = await setupEnvironment();
+function main() {
     console.log(root);
     drawScene(root);
 }

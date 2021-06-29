@@ -118,8 +118,8 @@ class Entity {
                 // if new vertex, insert
                 if (typeof inx == 'undefined') {
                     let p: any = positionUnpacked[pi];
-                    let n: any = normalsUnpacked[pi];
-                    let t: any = uvUnpacked[pi];
+                    let n: any = normalsUnpacked[ni];
+                    let t: any = uvUnpacked[ti];
                     pos.push(p.z, p.y, p.x);
                     norm.push(n.z, n.y, n.x);
                     uv.push(t.u, t.v);

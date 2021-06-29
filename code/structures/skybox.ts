@@ -109,12 +109,12 @@ class Skybox {
             // Asynchronously load an image
             const image = new Image();
             image.src = url;
-            image.addEventListener('load', function () {
+            image.onload = () => {
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_CUBE_MAP, thisref._skyboxTexture);
                 gl.texImage2D(target, level, internalFormat, format, type, image);
                 gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-            });
+            };
         });
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
