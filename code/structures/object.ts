@@ -129,8 +129,8 @@ class Entity {
         // UV
         this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, uvCoordBuffer);
         this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(uv), this.shader.gl.STATIC_DRAW);
-        this.shader.gl.enableVertexAttribArray(this.shader.normalAttributeLocation);
-        this.shader.gl.vertexAttribPointer(this.shader.normalAttributeLocation, 2, this.shader.gl.FLOAT, false, 0, 0);
+        this.shader.gl.enableVertexAttribArray(this.shader.uvAttributeLocation);
+        this.shader.gl.vertexAttribPointer(this.shader.uvAttributeLocation, 2, this.shader.gl.FLOAT, false, 0, 0);
 
         // INDICES
         this.shader.gl.bindBuffer(this.shader.gl.ELEMENT_ARRAY_BUFFER, indBuffer);

@@ -16,6 +16,7 @@ class Shader {
     shaderDir = "http://127.0.0.1/birb_hunt/code/shaders/";
     positionAttributeLocation: number;
     normalAttributeLocation: number;
+    uvAttributeLocation: number;
     matrixUniform: WebGLUniformLocation;
     // Lambert
     materialDiffuseColorUniform: WebGLUniformLocation;
@@ -30,6 +31,8 @@ class Shader {
         this.gl.useProgram(this.program);
         this.positionAttributeLocation = this.gl.getAttribLocation(this.program, "in_position");
         this.normalAttributeLocation = this.gl.getAttribLocation(this.program, "in_normal");
+        this.uvAttributeLocation = this.gl.getAttribLocation(this.program, "in_uv");
+
         this.matrixUniform = this.gl.getUniformLocation(this.program, "u_matrix");
     }
 
@@ -125,7 +128,6 @@ class Texture {
         // signal that there is a texture
         this.shader.gl.useProgram(this.shader.program);
         this.shader.gl.uniform1i(this.shader.gl.getUniformLocation(this.shader.program, "u_has_texture"), 1);
-        this.uvAttributeLocation = this.shader.gl.getAttribLocation(this.shader.program, "in_uv");
         this.textureUniform = this.shader.gl.getUniformLocation(this.shader.program, "u_texture");
         this.loadTexture(this.textureFile);
     }

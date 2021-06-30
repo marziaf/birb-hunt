@@ -23,7 +23,7 @@ void main() {
       diffuse_color = u_diffuse_color;
   }
 
-  vec3 light_dir = mat3(u_normal_matrix) * u_light_direction;
-  vec3 lambertColor = diffuse_color * u_light_color * dot(-light_dir, fs_normal);
-  outColor = vec4(clamp(lambertColor, 0.0, 1.0), 1.0);
+  vec3 light_dir = normalize(mat3(u_normal_matrix) * u_light_direction);
+  vec3 lambertColor = diffuse_color * u_light_color * dot(-light_dir, nNormal);
+  outColor = vec4(clamp(diffuse_color, 0.0, 1.0), 1.0);
 }
