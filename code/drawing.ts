@@ -37,7 +37,7 @@ async function init() {
     // Create objects to render plants, rocks...
     let lambertShader = new Shader(gl, shaderType.LAMBERT);
     await lambertShader.init();
-    let directionalLight = new Light(lightType.DIRECTIONAL, [0, 1, 0], [1, 0.5, 0]);
+    let directionalLight = new Light(lightType.DIRECTIONAL, [0.5, 0.5, 0.5], [1, 1, 1]);
     directionalLight.linkShader(lambertShader);
     let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
     sceneObjectsTexture.linkShader(lambertShader);
