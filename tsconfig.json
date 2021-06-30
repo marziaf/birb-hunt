@@ -20,6 +20,7 @@
       "./code/structures/skybox.ts",
       "./code/movement/camera_movement.ts",
       "./code/movement/scene_object_movement.ts",
+      "./code/libs/shader_handler.ts",
       "./code/quaternion.d.ts",
-  ]
+  ],
 }

@@ -7,10 +7,11 @@ import { SceneGraphNode } from "./structures/scene_graph.js";
 import { Camera } from "./movement/camera_movement.js";
 import { Skybox } from './structures/skybox.js'
 import { mov } from "./movement/scene_object_movement.js"
+import { Light, Shader, Texture, shaderType, lightType } from "./libs/shader_handler.js";
 
 var gl: WebGL2RenderingContext;
-var objectProgram: WebGLProgram;
 var skyboxProgram: WebGLProgram;
+
 var canvas: HTMLCanvasElement;
 var camera: Camera;
 var transformWorldMatrix: Array<number>;
@@ -19,6 +20,7 @@ var lastUpdateTime = 0;
 var sky: Skybox;
 var root: SceneGraphNode;
 
+var onGrassStaticRenderer: { shader: Shader, light: Light, texture: Texture };
 
 /**
  * Get canvas with webgl
@@ -29,15 +31,20 @@ async function init() {
     // Get a WebGL context
     canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
     gl = canvas.getContext("webgl2");
-    if (!gl) {
-        alert("GL context not opened");
-        return;
-    }
+    console.assert(gl != null && typeof gl != 'undefined');
     utils.resizeCanvasToDisplaySize(canvas);
-    // Link the two shaders into a program
+
+    // Create objects to render plants, rocks...
+    let lambertShader = new Shader(gl, shaderType.LAMBERT);
+    await lambertShader.init();
+    let directionalLight = new Light(lightType.DIRECTIONAL, [0, 1, 0], [1, 0.5, 0]);
+    directionalLight.linkShader(lambertShader);
+    let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
+    sceneObjectsTexture.linkShader(lambertShader);
+    onGrassStaticRenderer = { shader: lambertShader, light: directionalLight, texture: sceneObjectsTexture };
+
+    // sky
     let shaderDir: string = "http://127.0.0.1/birb_hunt/code/shaders/";
-    objectProgram = await utils.createAndCompileShaders(
-        gl, [shaderDir + 'vs.glsl', shaderDir + 'fs.glsl']);
     skyboxProgram = await utils.createAndCompileShaders(
         gl, [shaderDir + 'skybox_vs.glsl', shaderDir + 'skybox_fs.glsl']);
     // create scene
@@ -46,12 +53,12 @@ async function init() {
 }
 window.onload = init;
 
-
 /**
  * Recursively draw all the nodes of the graph
  * @param node 
  */
 function drawGraph(node: SceneGraphNode) {
+
     if (!node.isDummy()) {
         let WVP = utils.multiplyMatrices(transformWorldMatrix, node.getWorldMatrix());
         node.entity.draw(WVP);
@@ -78,6 +85,8 @@ function drawScene(root: SceneGraphNode) {
     // draw skybox
     sky.draw(utils.invertMatrix(transformWorldMatrix));
     // draw scene objects
+    onGrassStaticRenderer.shader.set(utils.invertMatrix(transformWorldMatrix));
+    onGrassStaticRenderer.light.set();
     drawGraph(root);
     //loop
     window.requestAnimationFrame(() => drawScene(root));
@@ -85,7 +94,6 @@ function drawScene(root: SceneGraphNode) {
 
 async function setupEnvironment() {
     // Texture image for the objects
-    let sceneTexture = "./assets/scene_objects/Texture_01.jpg";
     let objFileDir = "./assets/scene_objects/";
 
     // Create the skybox
@@ -93,10 +101,10 @@ async function setupEnvironment() {
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
 
     // Create the possible objects to insert in the scene
-    let objectNamesQtys = [{ name: "flower", qty: 10 }, { name: "plant", qty: 20 },
+    let objectNamesQtys = [{ name: "flower", qty: 5 }, { name: "plant", qty: 5 },
     { name: "rock1", qty: 1 }, { name: "rock2", qty: 1 }, { name: "rock3", qty: 1 },
-    { name: "smallrock", qty: 5 }, { name: "stump", qty: 3 }, { name: "tree1", qty: 10 },
-    { name: "tree2", qty: 10 }, { name: "tree3", qty: 10 }, { name: "tree4", qty: 10 }];
+    { name: "smallrock", qty: 5 }, { name: "stump", qty: 3 }, { name: "tree1", qty: 5 },
+    { name: "tree2", qty: 5 }, { name: "tree3", qty: 5 }, { name: "tree4", qty: 5 }];
 
     // Create the scene graph
     // root
@@ -104,16 +112,21 @@ async function setupEnvironment() {
     // grass
     let grassLevel = new SceneGraphNode(null, "grassLevel");
     grassLevel.setParent(root);
-    let grass = new Entity(objFileDir + 'grass.obj', { gl: gl, pr: objectProgram }, sceneTexture);
+
+    let grass = new Entity(objFileDir + 'grass.obj', onGrassStaticRenderer.shader);
     await grass.create();
+
     let grassNode = new SceneGraphNode(grass, "grass");
     grassNode.setParent(root);
     mov.initLocalPosition(grassNode, 0, 0, 0, 0, 0, 0, 5);
+
     // objects on grass
     for (const { name, qty } of objectNamesQtys) {
         for (let i = 0; i < qty; i++) {
-            let obj = new Entity(objFileDir + name + ".obj", { gl: gl, pr: objectProgram }, sceneTexture);
+
+            let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader);
             await obj.create();
+
             let node = new SceneGraphNode(obj, name + i);
             node.setParent(grassLevel);
             mov.initLocalPosition(node,
