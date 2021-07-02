@@ -158,7 +158,7 @@ var utils = {
         for (let i = 0; i < v.length; i++) {
             norm += v[i] * v[i];
         }
-        return norm;
+        return Math.sqrt(norm);
     },
 
     normalize: function(v) {

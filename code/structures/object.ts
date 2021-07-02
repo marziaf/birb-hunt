@@ -12,7 +12,7 @@ class Entity {
     private numVertices: number;
 
 
-    constructor(private file_obj: string, private shader: Shader) { }
+    constructor(private file_obj: string, private shader: Shader, private hasVertexSmoothing: boolean = true) { }
 
     /**
      * Complete the construction with async elements
@@ -55,8 +55,13 @@ class Entity {
      */
     private _packFaces(faces: Array<any>, positionUnpacked: Array<Array<object>>,
         normalsUnpacked: Array<Array<object>>, uvUnpacked: Array<Array<object>>) {
+        if (this.hasVertexSmoothing) {
+            // it will return the normals with the same indices of positions!
+            normalsUnpacked = this._modifyOriginalNormGouraud(faces, positionUnpacked, normalsUnpacked);
+        }
         var pos = []; var norm = []; var uv = []; var indices = [];
         // memory: store the vertices (pos, norm, uv) already inserted
+        // the position of a tuple in map represents the index in the final structure
         var memory = new Map();
         var uniqueVertCount = 0;
         faces.forEach(triang => {
@@ -65,13 +70,16 @@ class Entity {
                 let pi = vertex.vertexIndex - 1;
                 let ni = vertex.vertexNormalIndex - 1;
                 let ti = vertex.textureCoordsIndex - 1;
+                if (this.hasVertexSmoothing) {
+                    ni = pi;
+                }
                 let tuple: any = { pi, ni, ti };
                 let inx = memory.get(tuple);
                 // if new vertex, insert
+                let p: any = positionUnpacked[pi];
+                let n: any = normalsUnpacked[ni];
+                let t: any = uvUnpacked[ti];
                 if (typeof inx == 'undefined') {
-                    let p: any = positionUnpacked[pi];
-                    let n: any = normalsUnpacked[ni];
-                    let t: any = uvUnpacked[ti];
                     pos.push(p.z, p.y, p.x);
                     norm.push(n.z, n.y, n.x);
                     uv.push(t.u, t.v);
@@ -84,61 +92,123 @@ class Entity {
                     indices.push(inx);
                 }
             })
-        })
+        });
+
         return { pos, norm, uv, indices };
     }
+
+    private _distance(v1: any, v2: any) {
+        let v = [0, 0, 0];
+        v[0] = v1.x - v2.x;
+        v[1] = v1.y - v2.y;
+        v[2] = v1.z - v2.z;
+        return utils.norm(v);
+    }
+
+    private _sumNormals(v1: any, v2: any) {
+        if (v2 == null || typeof v2 == 'undefined') return v1;
+
+        let v = { x: 0, y: 0, z: 0 };
+        v.x = v1.x + v2.x;
+        v.y = v1.y + v2.y;
+        v.z = v1.z + v2.z;
+        return v;
+    }
+
+    private _multiplyScalarVector(k: number, v: any) {
+        v.x *= k;
+        v.y *= k;
+        v.z *= k;
+        return v;
+    }
+
+    private _modifyOriginalNormGouraud(faces: Array<any>, positionUnpacked: Array<Array<object>>,
+        normalsUnpacked: Array<Array<object>>) {
+        var newNormalsUnpacked = [];
+        let vp = []; let p, vn, n; let d = [[]];
+        faces.forEach(triang => {
+            for (int i = 0; i < 3; i++) {
+
+        }
+        let vp0 = triang.vertices[0].vertexIndex - 1;
+        let vp1 = triang.vertices[1].vertexIndex - 1;
+        let vp2 = triang.vertices[2].vertexIndex - 1;
+        let p0 = positionUnpacked[vp0];
+        let p1 = positionUnpacked[vp1];
+        let p2 = positionUnpacked[vp2];
+        let vn0 = triang.vertices[0].vertexNormalIndex - 1;
+        let vn1 = triang.vertices[1].vertexNormalIndex - 1;
+        let vn2 = triang.vertices[2].vertexNormalIndex - 1;
+        let n0 = normalsUnpacked[vn0];
+        let n1 = normalsUnpacked[vn1];
+        let n2 = normalsUnpacked[vn2];
+        let d01 = this._distance(p0, p1);
+        let d02 = this._distance(p0, p2);
+        let d12 = this._distance(p1, p2);
+
+        newNormalsUnpacked[vp0] = this._sumNormals(this._multiplyScalarVector(d01, n1), newNormalsUnpacked[vp0]);
+        newNormalsUnpacked[vp0] = this._sumNormals(this._multiplyScalarVector(d02, n2), newNormalsUnpacked[vp0]);
+        newNormalsUnpacked[vp1] = this._sumNormals(this._multiplyScalarVector(d12, n2), newNormalsUnpacked[vp1]);
+        newNormalsUnpacked[vp1] = this._sumNormals(this._multiplyScalarVector(d01, n0), newNormalsUnpacked[vp1]);
+        newNormalsUnpacked[vp2] = this._sumNormals(this._multiplyScalarVector(d02, n0), newNormalsUnpacked[vp2]);
+        newNormalsUnpacked[vp2] = this._sumNormals(this._multiplyScalarVector(d12, n1), newNormalsUnpacked[vp2]);
+    })
+        return newNormalsUnpacked;
+    }
+
+
 
 
     /**
      * Build the VAO (position + normals + uv + indices)
      * @returns Promise<WebGLVertexArrayObject>
      */
-    private async _buildVAO(): Promise<WebGLVertexArrayObject> {
-        var data = await this._readObj();
-        let posData = data.models[0].vertices;
-        let normalData = data.models[0].vertexNormals;
-        let uvData = data.models[0].textureCoords;
-        let indicesData = data.models[0].faces;
-        console.assert(typeof indicesData != 'undefined' && typeof uvData != 'undefined' &&
-            typeof normalData != 'undefined' && typeof posData != 'undefined' && typeof data != 'undefined');
+    private async _buildVAO(): Promise < WebGLVertexArrayObject > {
+    var data = await this._readObj();
+    let posData = data.models[0].vertices;
+    let normalData = data.models[0].vertexNormals;
+    let uvData = data.models[0].textureCoords;
+    let indicesData = data.models[0].faces;
+    console.assert(typeof indicesData != 'undefined' && typeof uvData != 'undefined' &&
+        typeof normalData != 'undefined' && typeof posData != 'undefined' && typeof data != 'undefined');
 
-        let { pos, norm, uv, indices } = this._packFaces(indicesData, posData, normalData, uvData);
+    let { pos, norm, uv, indices } = this._packFaces(indicesData, posData, normalData, uvData);
 
-        // create and use the vertex array object for the current obj
-        var vao = this.shader.gl.createVertexArray();
-        this.shader.gl.bindVertexArray(vao)
+// create and use the vertex array object for the current obj
+var vao = this.shader.gl.createVertexArray();
+this.shader.gl.bindVertexArray(vao)
 
-        // create the buffers
-        let posCoordBuffer = this.shader.gl.createBuffer();
-        let normCoordBuffer = this.shader.gl.createBuffer();
-        let uvCoordBuffer = this.shader.gl.createBuffer();
-        let indBuffer = this.shader.gl.createBuffer();
+// create the buffers
+let posCoordBuffer = this.shader.gl.createBuffer();
+let normCoordBuffer = this.shader.gl.createBuffer();
+let uvCoordBuffer = this.shader.gl.createBuffer();
+let indBuffer = this.shader.gl.createBuffer();
 
-        // POSITION
-        this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, posCoordBuffer);
-        this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(pos), this.shader.gl.STATIC_DRAW);
-        this.shader.gl.enableVertexAttribArray(this.shader.positionAttributeLocation);
-        this.shader.gl.vertexAttribPointer(this.shader.positionAttributeLocation, 3, this.shader.gl.FLOAT, false, 0, 0);
+// POSITION
+this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, posCoordBuffer);
+this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(pos), this.shader.gl.STATIC_DRAW);
+this.shader.gl.enableVertexAttribArray(this.shader.positionAttributeLocation);
+this.shader.gl.vertexAttribPointer(this.shader.positionAttributeLocation, 3, this.shader.gl.FLOAT, false, 0, 0);
 
-        // NORMALS
-        this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, normCoordBuffer);
-        this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(norm), this.shader.gl.STATIC_DRAW);
-        this.shader.gl.enableVertexAttribArray(this.shader.normalAttributeLocation);
-        this.shader.gl.vertexAttribPointer(this.shader.normalAttributeLocation, 3, this.shader.gl.FLOAT, false, 0, 0);
+// NORMALS
+this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, normCoordBuffer);
+this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(norm), this.shader.gl.STATIC_DRAW);
+this.shader.gl.enableVertexAttribArray(this.shader.normalAttributeLocation);
+this.shader.gl.vertexAttribPointer(this.shader.normalAttributeLocation, 3, this.shader.gl.FLOAT, false, 0, 0);
 
-        // UV
-        this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, uvCoordBuffer);
-        this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(uv), this.shader.gl.STATIC_DRAW);
-        this.shader.gl.enableVertexAttribArray(this.shader.uvAttributeLocation);
-        this.shader.gl.vertexAttribPointer(this.shader.uvAttributeLocation, 2, this.shader.gl.FLOAT, false, 0, 0);
+// UV
+this.shader.gl.bindBuffer(this.shader.gl.ARRAY_BUFFER, uvCoordBuffer);
+this.shader.gl.bufferData(this.shader.gl.ARRAY_BUFFER, new Float32Array(uv), this.shader.gl.STATIC_DRAW);
+this.shader.gl.enableVertexAttribArray(this.shader.uvAttributeLocation);
+this.shader.gl.vertexAttribPointer(this.shader.uvAttributeLocation, 2, this.shader.gl.FLOAT, false, 0, 0);
 
-        // INDICES
-        this.shader.gl.bindBuffer(this.shader.gl.ELEMENT_ARRAY_BUFFER, indBuffer);
-        this.shader.gl.bufferData(this.shader.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.shader.gl.STATIC_DRAW);
+// INDICES
+this.shader.gl.bindBuffer(this.shader.gl.ELEMENT_ARRAY_BUFFER, indBuffer);
+this.shader.gl.bufferData(this.shader.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), this.shader.gl.STATIC_DRAW);
 
-        this.numVertices = indices.length;
+this.numVertices = indices.length;
 
-        return vao;
+return vao;
     }
 
 

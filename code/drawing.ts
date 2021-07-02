@@ -110,10 +110,10 @@ async function setupEnvironment() {
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
 
     // Create the possible objects to insert in the scene
-    let objectNamesQtys = [{ name: "flower", qty: 5 }, { name: "plant", qty: 5 },
-    { name: "rock1", qty: 1 }, { name: "rock2", qty: 1 }, { name: "rock3", qty: 1 },
-    { name: "smallrock", qty: 5 }, { name: "stump", qty: 3 }, { name: "tree1", qty: 5 },
-    { name: "tree2", qty: 5 }, { name: "tree3", qty: 5 }, { name: "tree4", qty: 5 }];
+    let objectNamesQtys = [{ name: "flower", qty: 30 }, { name: "plant", qty: 20 },
+    { name: "rock1", qty: 2 }, { name: "rock2", qty: 2 }, { name: "rock3", qty: 2 },
+    { name: "smallrock", qty: 10 }, { name: "stump", qty: 5 }, { name: "tree1", qty: 10 },
+    { name: "tree2", qty: 10 }, { name: "tree3", qty: 10 }, { name: "tree4", qty: 10 }];
 
     // Create the scene graph
     // root
@@ -140,7 +140,8 @@ async function setupEnvironment() {
             node.setParent(grassLevel);
             mov.initLocalPosition(node,
                 Math.random() * Math.sign(Math.random() - 0.5) * 40, 0, Math.random() * Math.sign(Math.random() - 0.5) * 40, // translation
-                Math.random() * Math.random() * 360, 0, 0, 1); // rotation
+                Math.random() * Math.random() * 360, 0, 0, //rotation
+                0.9 + Math.random() * 0.8); // scale
         }
     };
     root.updateWorldMatrix();
