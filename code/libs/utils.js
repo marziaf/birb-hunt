@@ -126,11 +126,6 @@ var utils = {
         }
     },
 
-
-
-
-
-
     resizeCanvasToDisplaySize: function(canvas) {
         const expandFullScreen = () => {
             canvas.width = window.innerWidth;
@@ -142,8 +137,6 @@ var utils = {
         // Resize screen when the browser has triggered the resize event
         window.addEventListener('resize', expandFullScreen);
     },
-
-
 
 
     //*** MATH LIBRARY
@@ -158,6 +151,23 @@ var utils = {
             0, 0, 1, 0,
             0, 0, 0, 1
         ];
+    },
+
+    norm: function(v) {
+        let norm = 0;
+        for (let i = 0; i < v.length; i++) {
+            norm += v[i] * v[i];
+        }
+        return norm;
+    },
+
+    normalize: function(v) {
+        let n = utils.norm(v);
+        if (n == 0) return v;
+        for (let i = 0; i < v.length; i++) {
+            v[i] /= n;
+        }
+        return v;
     },
 
     //requires as a parameter a 4x4 matrix (array of 16 values)

@@ -14,7 +14,7 @@ class Camera {
     // Camera perspective
     private _perspectiveMatrix: Array<number>;
 
-    constructor(canvas: HTMLCanvasElement, height: number = 2, translationSpeed: number = 5, rotationSpeed = { x: 30, y: 30 }) {
+    constructor(canvas: HTMLCanvasElement, height: number = 2, translationSpeed: number = 25, rotationSpeed = { x: 30, y: 30 }) {
         this._canvas = canvas;
         this._translationSpeed = translationSpeed;
         this._rotationSpeed = rotationSpeed;
@@ -87,7 +87,7 @@ class Camera {
     /**
      * Returns the inverse of the VP matrix
      * @param deltaTime 
-     * @returns 
+     * @returns view, view-projection matrices
      */
     getViewProjectionMatrix(deltaTime: number) {
         this._deltaTime = deltaTime;
@@ -95,7 +95,7 @@ class Camera {
         let view = utils.MakeView(this._translation.x, this._translation.y, this._translation.z, this._angles.elevation, this._angles.direction);
 
         let viewProjection = utils.multiplyMatrices(this._perspectiveMatrix, view);
-        return viewProjection;
+        return { view, viewProjection };
     }
 }
 export { Camera };

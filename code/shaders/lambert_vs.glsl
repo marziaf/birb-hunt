@@ -12,7 +12,7 @@ uniform mat4 u_matrix;
 uniform mat4 u_normal_matrix;
 
 void main() {
-  fs_normal = mat3(u_normal_matrix) * in_normal;
+  fs_normal = mat3(u_normal_matrix) * in_normal;  
   fs_uv = in_uv;
   gl_Position = u_matrix * in_position;
 }

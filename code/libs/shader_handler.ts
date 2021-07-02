@@ -9,7 +9,13 @@ enum lightType {
     DIRECTIONAL,
 }
 
-
+/**
+ * Deal with the main aspects shader-related:
+ * - compile
+ * - get vertices locations in program
+ * - get matrices locations in program
+ * - ...
+ */
 class Shader {
     program: WebGLProgram;
     // Common variables for shaders
@@ -22,48 +28,53 @@ class Shader {
     materialDiffuseColorUniform: WebGLUniformLocation;
     normalMatrixUniform: WebGLUniformLocation;
 
+    /**
+     * Define the shader type
+     * Construction must be finished with init()
+     * @param gl 
+     * @param shaderType 
+     */
     constructor(public readonly gl: WebGL2RenderingContext, public readonly shaderType: shaderType) { }
 
+    /**
+     * Async compile shaders and get atributes/uniforms locations
+     * To be executed before using the shader
+     */
     async init() {
         if (this.shaderType == shaderType.LAMBERT) {
             await this.initLambert();
-        } else { throw "No valid shader type"; }
+        } else console.assert(true);
         this.gl.useProgram(this.program);
         this.positionAttributeLocation = this.gl.getAttribLocation(this.program, "in_position");
         this.normalAttributeLocation = this.gl.getAttribLocation(this.program, "in_normal");
         this.uvAttributeLocation = this.gl.getAttribLocation(this.program, "in_uv");
 
         this.matrixUniform = this.gl.getUniformLocation(this.program, "u_matrix");
+        this.normalMatrixUniform = this.gl.getUniformLocation(this.program, 'u_normal_matrix');
     }
 
-    set(transformMatrix: Array<number>) {
-        if (this.shaderType == shaderType.LAMBERT) {
-            this.setLambert(transformMatrix);
-        }
-    }
-
-    async cloneFromConstructor(): Promise<Shader> {
-        let sh = new Shader(this.gl, this.shaderType);
-        await sh.init();
-        return sh;
+    /**
+     * Pass to the program the matrices to transform the attributes
+     * @param transformMatrix 
+     */
+    transform(transformMatrix: Array<number>) {
+        let transpose = utils.transposeMatrix(transformMatrix);
+        let inverseTranspose = utils.invertMatrix(transpose);
+        this.gl.useProgram(this.program);
+        this.gl.uniformMatrix4fv(this.matrixUniform, false, transpose);
+        this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, inverseTranspose);
     }
 
     private async initLambert() {
         this.program = await utils.createAndCompileShaders(
             this.gl, [this.shaderDir + 'lambert_vs.glsl', this.shaderDir + 'lambert_fs.glsl']);
-        this.gl.useProgram(this.program);
-        this.normalMatrixUniform = this.gl.getUniformLocation(this.program, 'u_normal_matrix');
-    }
-
-    private setLambert(transformMatrix: Array<number>, diffuseColorMaterial: Array<number> = null) {
-        this.gl.useProgram(this.program);
-        let posMatrix = utils.transposeMatrix(transformMatrix);
-        this.gl.uniformMatrix4fv(this.matrixUniform, false, posMatrix);
-        let normalMatrix = utils.invertMatrix(posMatrix);
-        this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, normalMatrix);
     }
 }
 
+
+/**
+ * Create and manage one light
+ */
 class Light {
     public shader: Shader;
     // locations
@@ -71,10 +82,23 @@ class Light {
     private lightColorUniform: WebGLUniformLocation;
     private materialDiffuseColorUniform: WebGLUniformLocation;
 
+    /**
+     * Define the light type and its parameters (set the needed ones according to shader type)
+     * Complete construction with linkShader()
+     * @param type 
+     * @param lightDirection 
+     * @param lightColor 
+     * @param diffuseColorMaterial 
+     */
     constructor(public type: lightType,
         public lightDirection: Array<number> = null, public lightColor: Array<number> = null,
         public diffuseColorMaterial: Array<number> = null,) { }
 
+    /**
+     * Link the light to a shader and get uniform locations
+     * Must be called before using light
+     * @param shader 
+     */
     linkShader(shader: Shader) {
         this.shader = shader;
         this.shader.gl.useProgram(this.shader.program);
@@ -86,33 +110,33 @@ class Light {
         }
     }
 
-    set(lightDirection: Array<number> = null, lightColor: Array<number> = null) {
+    /**
+     * Given the transform matrix, transform the spacial light parameters
+     * Call only once for frame
+     * @param matrix 
+     */
+    transform(matrix: Array<number> = null) {
         if (this.type == lightType.DIRECTIONAL) {
-            this.setDirectional(lightDirection, lightColor);
+            this.transformDirectional(matrix);
         }
     }
 
-    cloneFromConstructor(): Light {
-        let li = new Light(this.type, this.lightDirection, this.lightColor, this.diffuseColorMaterial);
-        return li;
-    }
+    private transformDirectional(matrix: Array<number>) {
+        let transpose = utils.transposeMatrix(matrix);
+        let inverseTranspose = utils.invertMatrix(transpose);
+        let light4 = utils.copy(this.lightDirection); light4[3] = 0;
+        let transformedDirection = utils.multiplyMatrixVector(inverseTranspose, light4);
 
-    // the shader will pass the normal matrix, which transforms also the light
-    private setDirectional(lightDirection: Array<number> = null, lightColor: Array<number> = null) {
-        let dir = this.lightDirection;
-        let color = this.lightColor;
-        if (lightDirection != null) {
-            dir = lightDirection;
-        }
-        if (lightColor != null) {
-            color = lightColor;
-        }
-        this.shader.gl.uniform3fv(this.lightColorUniform, color);
-        this.shader.gl.uniform3fv(this.lightDirectionUniform, dir);
+        this.shader.gl.useProgram(this.shader.program);
+        this.shader.gl.uniform3fv(this.lightColorUniform, this.lightColor);
+
+        this.shader.gl.uniform3fv(this.lightDirectionUniform, transformedDirection.slice(0, 3));
     }
 }
 
-
+/**
+ * Create and manage a texture
+ */
 class Texture {
     shader: Shader;
     // texture
@@ -121,8 +145,17 @@ class Texture {
     uvAttributeLocation: number;
     textureUniform: WebGLUniformLocation;
 
+    /**
+     * Define the souce file
+     * To complete the construction, call also linkShader
+     * @param textureFile 
+     */
     constructor(public textureFile: string) { }
 
+    /**
+     * Associate a shader to get the shading program
+     * @param shader 
+     */
     linkShader(shader: Shader) {
         this.shader = shader;
         // signal that there is a texture
@@ -130,11 +163,6 @@ class Texture {
         this.shader.gl.uniform1i(this.shader.gl.getUniformLocation(this.shader.program, "u_has_texture"), 1);
         this.textureUniform = this.shader.gl.getUniformLocation(this.shader.program, "u_texture");
         this.loadTexture(this.textureFile);
-    }
-
-    cloneFromConstructor(): Texture {
-        let te = new Texture(this.textureFile);
-        return te;
     }
 
     private loadTexture(textureSrc: string) {

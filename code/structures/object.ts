@@ -25,10 +25,10 @@ class Entity {
      * Draw the object on scene
      * @param projectionMatrix 
      */
-    draw(matrixTransform: Array<number>) {
+    draw(WVP: Array<number>) {
         this.shader.gl.useProgram(this.shader.program);
         // send the projection matrix
-        this.shader.set(matrixTransform);
+        this.shader.transform(WVP);
         // bind obj vao and draw
         this.shader.gl.bindVertexArray(this.vao);
         this.shader.gl.drawElements(this.shader.gl.TRIANGLES, this.numVertices, this.shader.gl.UNSIGNED_SHORT, 0);

@@ -14,11 +14,12 @@ var skyboxProgram: WebGLProgram;
 
 var canvas: HTMLCanvasElement;
 var camera: Camera;
-var transformWorldMatrix: Array<number>;
 var lastUpdateTime = 0;
 
 var sky: Skybox;
 var root: SceneGraphNode;
+
+var VPmatrix: Array<number>;
 
 var onGrassStaticRenderer: { shader: Shader, light: Light, texture: Texture };
 
@@ -37,7 +38,11 @@ async function init() {
     // Create objects to render plants, rocks...
     let lambertShader = new Shader(gl, shaderType.LAMBERT);
     await lambertShader.init();
-    let directionalLight = new Light(lightType.DIRECTIONAL, [0.5, 0.5, 0.5], [1, 1, 1]);
+    let dirLightAlpha = utils.degToRad(180);
+    let dirLightBeta = utils.degToRad(100);
+    let dirLight = [Math.cos(dirLightAlpha) * Math.cos(dirLightBeta),
+    Math.sin(dirLightAlpha), Math.cos(dirLightAlpha) * Math.sin(dirLightBeta)];
+    let directionalLight = new Light(lightType.DIRECTIONAL, dirLight, [1, 1, 0.8]);
     directionalLight.linkShader(lambertShader);
     let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
     sceneObjectsTexture.linkShader(lambertShader);
@@ -60,7 +65,7 @@ window.onload = init;
 function drawGraph(node: SceneGraphNode) {
 
     if (!node.isDummy()) {
-        let WVP = utils.multiplyMatrices(transformWorldMatrix, node.getWorldMatrix());
+        let WVP = utils.multiplyMatrices(VPmatrix, node.getWorldMatrix());
         node.entity.draw(WVP);
     }
     node.getChildren().forEach(child => drawGraph(child));
@@ -81,12 +86,14 @@ function drawScene(root: SceneGraphNode) {
     var deltaT = (currentTime - lastUpdateTime) / 1000.0;
     lastUpdateTime = currentTime;
     // get the projection matrix
-    transformWorldMatrix = camera.getViewProjectionMatrix(deltaT);
+    let matrices = camera.getViewProjectionMatrix(deltaT);
+    VPmatrix = matrices.viewProjection;
+
     // draw skybox
-    sky.draw(utils.invertMatrix(transformWorldMatrix));
+    sky.draw(utils.invertMatrix(VPmatrix));
+    // set the light only once
+    onGrassStaticRenderer.light.transform(VPmatrix);
     // draw scene objects
-    onGrassStaticRenderer.shader.set(utils.invertMatrix(transformWorldMatrix));
-    onGrassStaticRenderer.light.set();
     drawGraph(root);
     //loop
     window.requestAnimationFrame(() => drawScene(root));
@@ -122,11 +129,11 @@ async function setupEnvironment() {
 
     // objects on grass
     for (const { name, qty } of objectNamesQtys) {
+
+        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader);
+        await obj.create();
+
         for (let i = 0; i < qty; i++) {
-
-            let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader);
-            await obj.create();
-
             let node = new SceneGraphNode(obj, name + i);
             node.setParent(grassLevel);
             mov.initLocalPosition(node,
