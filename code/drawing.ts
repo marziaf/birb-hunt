@@ -20,6 +20,7 @@ var sky: Skybox;
 var root: SceneGraphNode;
 
 var VPmatrix: Array<number>;
+var Vmatrix: Array<number>;
 
 var onGrassStaticRenderer: { shader: Shader, light: Light, texture: Texture };
 
@@ -38,11 +39,12 @@ async function init() {
     // Create objects to render plants, rocks...
     let lambertShader = new Shader(gl, shaderType.LAMBERT);
     await lambertShader.init();
-    let dirLightAlpha = utils.degToRad(180);
-    let dirLightBeta = utils.degToRad(100);
+    let dirLightAlpha = utils.degToRad(60);
+    let dirLightBeta = utils.degToRad(180);
     let dirLight = [Math.cos(dirLightAlpha) * Math.cos(dirLightBeta),
-    Math.sin(dirLightAlpha), Math.cos(dirLightAlpha) * Math.sin(dirLightBeta)];
-    let directionalLight = new Light(lightType.DIRECTIONAL, dirLight, [1, 1, 0.8]);
+    Math.sin(dirLightAlpha),
+    Math.cos(dirLightAlpha)];
+    let directionalLight = new Light(lightType.DIRECTIONAL, dirLight, [1, 1, 1]);
     directionalLight.linkShader(lambertShader);
     let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
     sceneObjectsTexture.linkShader(lambertShader);
@@ -65,8 +67,9 @@ window.onload = init;
 function drawGraph(node: SceneGraphNode) {
 
     if (!node.isDummy()) {
-        let WVP = utils.multiplyMatrices(VPmatrix, node.getWorldMatrix());
-        node.entity.draw(WVP);
+        let W = node.getWorldMatrix();
+        let WVP = utils.multiplyMatrices(VPmatrix, W);
+        node.entity.draw(WVP, W);
     }
     node.getChildren().forEach(child => drawGraph(child));
 }
@@ -88,7 +91,6 @@ function drawScene(root: SceneGraphNode) {
     // get the projection matrix
     let matrices = camera.getViewProjectionMatrix(deltaT);
     VPmatrix = matrices.viewProjection;
-
     // draw skybox
     sky.draw(utils.invertMatrix(VPmatrix));
     // set the light only once

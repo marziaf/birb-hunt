@@ -24,6 +24,6 @@ void main() {
       diffuse_color = u_diffuse_color;
   }
 
-  vec3 lambertColor = diffuse_color * u_light_color * dot(-lighDir, nNormal);
+  vec3 lambertColor = diffuse_color * u_light_color * dot(lighDir, nNormal);
   outColor = vec4(clamp(lambertColor, 0.0, 1.0), 1.0);
 }

@@ -57,12 +57,12 @@ class Shader {
      * Pass to the program the matrices to transform the attributes
      * @param transformMatrix 
      */
-    transform(transformMatrix: Array<number>) {
-        let transpose = utils.transposeMatrix(transformMatrix);
-        let inverseTranspose = utils.invertMatrix(transpose);
+    transform(WVP: Array<number>, Loc: Array<number>) {
+        let transposeWVP = utils.transposeMatrix(WVP);
+        let transposeLoc = (utils.transposeMatrix(Loc)); // TODO works with non-uniform
         this.gl.useProgram(this.program);
-        this.gl.uniformMatrix4fv(this.matrixUniform, false, transpose);
-        this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, inverseTranspose);
+        this.gl.uniformMatrix4fv(this.matrixUniform, false, transposeWVP);
+        this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, transposeLoc);
     }
 
     private async initLambert() {
@@ -125,7 +125,7 @@ class Light {
         let transpose = utils.transposeMatrix(matrix);
         let inverseTranspose = utils.invertMatrix(transpose);
         let light4 = utils.copy(this.lightDirection); light4[3] = 0;
-        let transformedDirection = utils.multiplyMatrixVector(inverseTranspose, light4);
+        let transformedDirection = utils.multiplyMatrixVector(utils.identityMatrix(), light4);//inverseTranspose, light4);
 
         this.shader.gl.useProgram(this.shader.program);
         this.shader.gl.uniform3fv(this.lightColorUniform, this.lightColor);

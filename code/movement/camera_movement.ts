@@ -92,10 +92,10 @@ class Camera {
     getViewProjectionMatrix(deltaTime: number) {
         this._deltaTime = deltaTime;
 
+        // makeview already contains the inversion of the translation
         let view = utils.MakeView(this._translation.x, this._translation.y, this._translation.z, this._angles.elevation, this._angles.direction);
-
         let viewProjection = utils.multiplyMatrices(this._perspectiveMatrix, view);
-        return { view, viewProjection };
+        return { viewProjection, view };
     }
 }
 export { Camera };
