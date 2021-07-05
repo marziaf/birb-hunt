@@ -12,7 +12,9 @@ class Entity {
     private numVertices: number;
 
 
-    constructor(private file_obj: string, private shader: Shader, private hasVertexSmoothing: boolean = true) { }
+    constructor(private file_obj: string, private shader: Shader,
+        private metalness: number, private roughness: number, private specularColor: Array<number>,
+        private hasVertexSmoothing: boolean = true) { }
 
     /**
      * Complete the construction with async elements
@@ -28,6 +30,7 @@ class Entity {
     draw(WVP: Array<number>, Loc: Array<number>) {
         this.shader.gl.useProgram(this.shader.program);
         // send the projection matrix
+        this.shader.setPBRParameters(this.metalness, this.roughness, this.specularColor);
         this.shader.transform(WVP, Loc);
         // bind obj vao and draw
         this.shader.gl.bindVertexArray(this.vao);
@@ -149,7 +152,7 @@ class Entity {
                         // don't smooth sharp edges
                         let alpha = Math.abs(this._angleBetween(n[i], n[j]));
                         let m = n[j];
-                        if (alpha > 100) {
+                        if (alpha > 120) {
                             // pretend the vector were the same
                             m = n[i];
                         }
