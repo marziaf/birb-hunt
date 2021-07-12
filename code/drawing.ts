@@ -114,17 +114,17 @@ async function setupEnvironment() {
 
     // Create the possible objects to insert in the scene
     let objectNamesQtys = [
-        { name: "flower", qty: 30 },
-        { name: "plant", qty: 20 },
-        { name: "rock1", qty: 2 },
-        { name: "rock2", qty: 2 },
-        { name: "rock3", qty: 2 },
-        { name: "smallrock", qty: 10 },
-        { name: "stump", qty: 5 },
-        { name: "tree1", qty: 10 },
-        { name: "tree2", qty: 10 },
-        { name: "tree3", qty: 10 },
-        { name: "tree4", qty: 10 }];
+        { name: "flower", qty: 60, spec: 0.1, rough: 0.7 },
+        { name: "plant", qty: 30, spec: 0.4, rough: 0.7 },
+        { name: "rock1", qty: 2, spec: 0.2, rough: 1 },
+        { name: "rock2", qty: 2, spec: 0.2, rough: 1 },
+        { name: "rock3", qty: 2, spec: 0.2, rough: 1 },
+        { name: "smallrock", qty: 15, spec: 0.5, rough: 1 },
+        { name: "stump", qty: 20, spec: 0.05, rough: 1 },
+        { name: "tree1", qty: 30, spec: 0.2, rough: 1 },
+        { name: "tree2", qty: 20, spec: 0.2, rough: 1 },
+        { name: "tree3", qty: 20, spec: 0.2, rough: 1 },
+        { name: "tree4", qty: 20, spec: 0.2, rough: 1 }];
 
     // Create the scene graph
     // root
@@ -141,9 +141,9 @@ async function setupEnvironment() {
     mov.initLocalPosition(grassNode, 0, 0, 0, 0, 0, 0, 5);
 
     // objects on grass
-    for (const { name, qty } of objectNamesQtys) {
+    for (const { name, qty, spec, rough } of objectNamesQtys) {
 
-        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, 0.5, 0.9, [1, 1, 1]);
+        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, spec, rough, [1, 1, 1]);
         await obj.create();
 
         for (let i = 0; i < qty; i++) {
