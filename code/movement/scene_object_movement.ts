@@ -11,5 +11,12 @@ var mov = {
         node.setLocalMatrix(utils.MakeWorld(tx, ty, tz, rx, ry, rz, s));
     },
 
+    initRandomLocalPosition: function (node: SceneGraphNode) {
+        mov.initLocalPosition(node,
+            Math.random() * Math.sign(Math.random() - 0.5) * 40, 0, Math.random() * Math.sign(Math.random() - 0.5) * 40, // translation
+            Math.random() * Math.random() * 360, 0, 0, //rotation
+            0.9 + Math.random() * 0.8); // scale
+    }
+
 };
 export { mov };

@@ -7,7 +7,7 @@ import { SceneGraphNode } from "./structures/scene_graph.js";
 import { Camera } from "./movement/camera_movement.js";
 import { Skybox } from './structures/skybox.js'
 import { mov } from "./movement/scene_object_movement.js"
-import { Light, DirectionalLight, AmbientLight, Shader, Texture, shaderType } from "./libs/shader_handler.js";
+import { Light, DirectionalLight, AmbientLight, Shader, LambertShader, PBRShader, Texture } from "./libs/shader_handler.js";
 
 var gl: WebGL2RenderingContext;
 var skyboxProgram: WebGLProgram;
@@ -37,9 +37,7 @@ async function init() {
     utils.resizeCanvasToDisplaySize(canvas);
 
     // Create objects to render plants, rocks...
-    let lambertShader = new Shader(gl, shaderType.LAMBERT);
-    await lambertShader.init();
-    let realistic = new Shader(gl, shaderType.PBR);
+    let realistic = new PBRShader(gl);
     await realistic.init();
     // Lights
     let dirLightAlpha = utils.degToRad(60);
@@ -48,10 +46,8 @@ async function init() {
     Math.sin(dirLightAlpha),
     Math.cos(dirLightAlpha)];
     let directionalLight = new DirectionalLight(realistic, dirLight, [1, 1, 1]);
-    let ambientLight = new AmbientLight(realistic, [1, 0.8, 0.2]);
     // Textures
     let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
-    sceneObjectsTexture.linkShader(lambertShader);
     onGrassStaticRenderer = { shader: realistic, lights: [directionalLight], texture: sceneObjectsTexture };
 
     // sky
@@ -102,7 +98,6 @@ function drawScene(root: SceneGraphNode) {
     onGrassStaticRenderer.lights.forEach(light => {
         light.set(VPmatrix);
     });
-
     // draw scene objects
     drawGraph(root);
     //loop
@@ -154,10 +149,7 @@ async function setupEnvironment() {
         for (let i = 0; i < qty; i++) {
             let node = new SceneGraphNode(obj, name + i);
             node.setParent(grassLevel);
-            mov.initLocalPosition(node,
-                Math.random() * Math.sign(Math.random() - 0.5) * 40, 0, Math.random() * Math.sign(Math.random() - 0.5) * 40, // translation
-                Math.random() * Math.random() * 360, 0, 0, //rotation
-                0.9 + Math.random() * 0.8); // scale
+            mov.initRandomLocalPosition(node);
         }
     };
     root.updateWorldMatrix();

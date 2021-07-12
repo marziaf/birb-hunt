@@ -30,7 +30,7 @@ class Entity {
     draw(WVP: Array<number>, Loc: Array<number>) {
         this.shader.gl.useProgram(this.shader.program);
         // send the projection matrix
-        this.shader.setPBRParameters(this.metalness, this.roughness, this.specularColor);
+        this.shader.setParameters(this.metalness, this.roughness, this.specularColor);
         this.shader.transform(WVP, Loc);
         // bind obj vao and draw
         this.shader.gl.bindVertexArray(this.vao);

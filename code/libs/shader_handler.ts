@@ -4,10 +4,6 @@ import { Camera } from "../movement/camera_movement.js";
 import { Entity } from "../structures/object.js";
 import { SceneGraphNode } from "../structures/scene_graph.js";
 
-enum shaderType {
-    LAMBERT,
-    PBR,
-}
 
 
 /**
@@ -17,7 +13,7 @@ enum shaderType {
  * - get matrices locations in program
  * - ...
  */
-class Shader {
+abstract class Shader {
     program: WebGLProgram;
     // Common variables for shaders
     shaderDir = "http://127.0.0.1/birb_hunt/code/shaders/";
@@ -25,54 +21,36 @@ class Shader {
     normalAttributeLocation: number;
     uvAttributeLocation: number;
     matrixUniform: WebGLUniformLocation;
-    // Lambert
-    materialDiffuseColorUniform: WebGLUniformLocation;
     normalMatrixUniform: WebGLUniformLocation;
-    // PBR
-    roughnessUniform: WebGLUniformLocation;
-    metalnessUniform: WebGLUniformLocation;
-    specularColorUniform: WebGLUniformLocation;
+
 
     /**
-     * Define the shader type
      * Construction must be finished with init()
      * @param gl 
      * @param shaderType 
      */
-    constructor(public readonly gl: WebGL2RenderingContext, public readonly shaderType: shaderType) { }
+    constructor(public readonly gl: WebGL2RenderingContext) { }
 
     /**
      * Async compile shaders and get atributes/uniforms locations
      * To be executed before using the shader
      */
-    async init() {
-        if (this.shaderType == shaderType.LAMBERT) {
-            await this.initLambert();
-        }
-        else if (this.shaderType == shaderType.PBR) {
-            await this.initBRDF();
-        } else console.assert(false);
+    protected async init() {
         this.gl.useProgram(this.program);
         this.positionAttributeLocation = this.gl.getAttribLocation(this.program, "in_position");
         this.normalAttributeLocation = this.gl.getAttribLocation(this.program, "in_normal");
         this.uvAttributeLocation = this.gl.getAttribLocation(this.program, "in_uv");
-
         this.matrixUniform = this.gl.getUniformLocation(this.program, "u_matrix");
         this.normalMatrixUniform = this.gl.getUniformLocation(this.program, 'u_normal_matrix');
     }
+    setParameters(a: number, b: number, c: Array<number>) { }
 
-    setPBRParameters(metalness: number, roughness: number, specularColor: Array<number>) {
-        this.gl.useProgram(this.program);
-        this.gl.uniform1f(this.metalnessUniform, metalness);
-        this.gl.uniform1f(this.roughnessUniform, roughness);
-        this.gl.uniform3fv(this.specularColorUniform, specularColor);
-    }
 
     /**
      * Pass to the program the matrices to transform the attributes
      * @param transformMatrix 
      */
-    transform(WVP: Array<number>, Loc: Array<number>) {
+    public transform(WVP: Array<number>, Loc: Array<number>) {
         let transposeWVP = utils.transposeMatrix(WVP);
         let transposeLoc = (utils.transposeMatrix(Loc)); // TODO works with non-uniform scaling
         this.gl.useProgram(this.program);
@@ -80,20 +58,44 @@ class Shader {
         this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, transposeLoc);
     }
 
-    private async initLambert() {
-        this.program = await utils.createAndCompileShaders(
-            this.gl, [this.shaderDir + 'lambert_vs.glsl', this.shaderDir + 'lambert_fs.glsl']);
+}
+
+class LambertShader extends Shader {
+    constructor(public readonly gl: WebGL2RenderingContext) {
+        super(gl);
     }
 
-    private async initBRDF() {
+    public async init() {
+        this.program = await utils.createAndCompileShaders(
+            this.gl, [this.shaderDir + 'lambert_vs.glsl', this.shaderDir + 'lambert_fs.glsl']);
+        super.init();
+    }
+}
+
+class PBRShader extends Shader {
+    roughnessUniform: WebGLUniformLocation;
+    metalnessUniform: WebGLUniformLocation;
+    specularColorUniform: WebGLUniformLocation;
+    constructor(public readonly gl: WebGL2RenderingContext) {
+        super(gl);
+    }
+
+    public async init() {
         this.program = await utils.createAndCompileShaders(
             this.gl, [this.shaderDir + 'PBR_vs.glsl', this.shaderDir + 'PBR_fs.glsl']);
         this.metalnessUniform = this.gl.getUniformLocation(this.program, 'metalness');
         this.roughnessUniform = this.gl.getUniformLocation(this.program, 'roughness');
         this.specularColorUniform = this.gl.getUniformLocation(this.program, 'specularColor');
+        super.init();
+    }
+
+    setParameters(metalness: number, roughness: number, specularColor: Array<number>) {
+        this.gl.useProgram(this.program);
+        this.gl.uniform1f(this.metalnessUniform, metalness);
+        this.gl.uniform1f(this.roughnessUniform, roughness);
+        this.gl.uniform3fv(this.specularColorUniform, specularColor);
     }
 }
-
 
 /**
  * Create and manage one light
@@ -272,4 +274,4 @@ class Texture {
     }
 }
 
-export { Light, DirectionalLight, AmbientLight, Shader, Texture, shaderType };
+export { Light, DirectionalLight, AmbientLight, Shader, LambertShader, PBRShader, Texture };
