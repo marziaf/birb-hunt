@@ -226,7 +226,6 @@ class AmbientLight extends Light {
  * Create and manage a texture
  */
 class Texture {
-    shader: Shader;
     // texture
     texture: WebGLTexture;
     // locations
@@ -237,41 +236,28 @@ class Texture {
      * Define the souce file
      * To complete the construction, call also linkShader
      * @param textureFile 
+     * @param shader
      */
-    constructor(public textureFile: string) { }
-
-    /**
-     * Associate a shader to get the shading program
-     * @param shader 
-     */
-    linkShader(shader: Shader) {
-        this.shader = shader;
-        // signal that there is a texture
-        this.shader.gl.useProgram(this.shader.program);
-        this.shader.gl.uniform1i(this.shader.gl.getUniformLocation(this.shader.program, "u_has_texture"), 1);
-        this.textureUniform = this.shader.gl.getUniformLocation(this.shader.program, "u_texture");
-        this.loadTexture(this.textureFile);
-    }
-
-    private loadTexture(textureSrc: string) {
+    constructor(private shader: Shader, public textureFile: string) {
+        shader.gl.useProgram(shader.program);
+        this.textureUniform = shader.gl.getUniformLocation(shader.program, "u_texture");
         // create and bind texture
-        this.shader.gl.useProgram(this.shader.program);
         this.texture = this.shader.gl.createTexture();
         var image = new Image();
-        image.src = textureSrc;
-        var gl = this.shader.gl;
-        var texture = this.texture;
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        image.src = textureFile;
+        var gl = shader.gl;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         //gl.generateMipmap(gl.TEXTURE_2D);
+        var tex = this.texture;
         image.onload = function () {
-            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         }
     }
+
 }
 
 export { Light, DirectionalLight, AmbientLight, Shader, LambertShader, PBRShader, Texture };

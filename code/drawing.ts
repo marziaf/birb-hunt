@@ -47,7 +47,7 @@ async function init() {
     Math.cos(dirLightAlpha)];
     let directionalLight = new DirectionalLight(realistic, dirLight, [1, 1, 1]);
     // Textures
-    let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
+    let sceneObjectsTexture = new Texture(realistic, "./assets/scene_objects/Texture_01.jpg");
     onGrassStaticRenderer = { shader: realistic, lights: [directionalLight], texture: sceneObjectsTexture };
 
     // sky
@@ -143,7 +143,7 @@ async function setupEnvironment() {
     // objects on grass
     for (const { name, qty } of objectNamesQtys) {
 
-        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, 0.1, 0.9, [1, 1, 1]);
+        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, 0.5, 0.9, [1, 1, 1]);
         await obj.create();
 
         for (let i = 0; i < qty; i++) {
@@ -155,7 +155,7 @@ async function setupEnvironment() {
     root.updateWorldMatrix();
 
     // get shadow map
-    onGrassStaticRenderer.lights[0].setShadowMap(root);
+    //onGrassStaticRenderer.lights[0].setShadowMap(root);
 
     // Get the camera
     // create after the others to avoid problems with early event interception
@@ -164,10 +164,6 @@ async function setupEnvironment() {
     camera.setCameraParameters(40, aspectRatio, 0.1, 2000);
 
     return root;
-}
-
-function getShaderMap(light: Light) {
-
 }
 
 function main() {
