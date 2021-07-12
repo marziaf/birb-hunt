@@ -13,6 +13,8 @@ uniform mat4 u_normal_matrix;
 // Texture
 uniform bool u_has_texture;
 uniform sampler2D u_texture;
+uniform sampler2D u_shadowMap;
+uniform sampler2D u_frame_buffer;
 
 // BRDF
 in vec3 radiance_direction; // omega_r

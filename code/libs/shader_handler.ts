@@ -1,15 +1,14 @@
 import { collapseTextChangeRangesAcrossMultipleVersions, isAssertionExpression, isNullishCoalesce } from "typescript";
 import { utils } from "../libs/utils.js"
+import { Camera } from "../movement/camera_movement.js";
+import { Entity } from "../structures/object.js";
+import { SceneGraphNode } from "../structures/scene_graph.js";
 
 enum shaderType {
     LAMBERT,
     PBR,
 }
 
-enum lightType {
-    DIRECTIONAL,
-    AMBIENT
-}
 
 /**
  * Deal with the main aspects shader-related:
@@ -99,81 +98,127 @@ class Shader {
 /**
  * Create and manage one light
  */
-class Light {
-    public shader: Shader;
+abstract class Light {
     // locations
+    protected shadowMapUniform: WebGLUniformLocation;
+    protected frameBufferUniform: WebGLUniformLocation;
+    // shadow map
+    protected frameBuffer: WebGLFramebuffer;
+    private readonly mapSize = 512;
+
+    constructor(protected shader: Shader) { }
+
+    public set(matrix: Array<number>) { }
+
+    public setShadowMap(staticObjectsRoot: SceneGraphNode) {
+        if (this.frameBuffer == null || typeof this.frameBuffer == 'undefined') {
+            this.initShadowMap();
+        }
+    };
+
+    protected initShadowMap() {
+        let gl = this.shader.gl;
+        gl.useProgram(this.shader.program);
+        // frame buffer
+        this.frameBuffer = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer)
+        // create a texture to hold the colors (useless)
+        let color = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, color);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.mapSize, this.mapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color, 0);
+        // create a texture to hold the depth
+        let depthShadowMap = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, depthShadowMap);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, this.mapSize, this.mapSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthShadowMap, 0);
+        // link to shader
+        this.shadowMapUniform = gl.getUniformLocation(this.shader.program, "u_shadowMap");
+        this.frameBufferUniform = gl.getUniformLocation(this.shader.program, "u_frame_buffer");
+    }
+
+    protected drawShadowMap(staticObjectsRoot: SceneGraphNode, view: Array<number>) {
+        let gl = this.shader.gl;
+        // draw on frame buffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
+        gl.viewport(0, 0, this.mapSize, this.mapSize);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
+        gl.useProgram(this.shader.program);
+        this.drawGraph(staticObjectsRoot, view, this.shader);
+    }
+
+    private drawGraph(node: SceneGraphNode, VP: Array<number>, shader: Shader) {
+        if (!node.isDummy()) {
+            let W = node.getWorldMatrix();
+            let WVP = utils.multiplyMatrices(VP, W);
+            shader.transform(WVP, W);
+            shader.gl.bindVertexArray(node.entity.vao);
+            shader.gl.drawElements
+        }
+        node.getChildren().forEach(child => this.drawGraph(child, VP, shader));
+    }
+
+}
+
+class DirectionalLight extends Light {
     private lightDirectionUniform: WebGLUniformLocation;
     private lightColorUniform: WebGLUniformLocation;
     private materialDiffuseColorUniform: WebGLUniformLocation;
-    private ambientColorUniform: WebGLUniformLocation;
 
-    /**
-     * Define the light type and its parameters (set the needed ones according to shader type)
-     * Complete construction with linkShader()
-     * @param type 
-     * @param lightDirection 
-     * @param lightColor 
-     * @param diffuseColorMaterial 
-     */
-    constructor(public type: lightType,
-        public lightDirection: Array<number> = null, public lightColor: Array<number> = null,
-        public diffuseColorMaterial: Array<number> = null, public ambientColor: Array<number> = null) { }
-
-    /**
-     * Link the light to a shader and get uniform locations
-     * Must be called before using light
-     * @param shader 
-     */
-    linkShader(shader: Shader) {
-        this.shader = shader;
-        if (this.type == lightType.DIRECTIONAL) {
-            this.getLocationsDirectional();
-        }
-        if (this.type == lightType.AMBIENT) {
-            this.getLocationsAmbient();
-        }
-    }
-
-    /**
-     * Given the transform matrix, transform the spacial light parameters
-     * Call only once for frame
-     * @param matrix 
-     */
-    transform(matrix: Array<number> = null) {
-        this.shader.gl.useProgram(this.shader.program);
-        let transpose = utils.transposeMatrix(matrix);
-        let inverseTranspose = utils.invertMatrix(transpose);
-
-        if (this.type == lightType.DIRECTIONAL) {
-            this.transformDirectional(inverseTranspose);
-        }
-        if (this.type == lightType.AMBIENT) {
-            this.shader.gl.uniform3fv(this.ambientColorUniform, this.ambientColor);
-        }
-    }
-
-    private transformDirectional(matrix: Array<number>) {
-        let light4 = utils.copy(this.lightDirection); light4[3] = 0;
-        let transformedDirection = utils.multiplyMatrixVector(utils.identityMatrix(), light4);//inverseTranspose, light4);
-        this.shader.gl.uniform3fv(this.lightColorUniform, this.lightColor);
-
-        this.shader.gl.uniform3fv(this.lightDirectionUniform, transformedDirection.slice(0, 3));
-    }
-
-    private getLocationsDirectional() {
+    constructor(shader: Shader, public lightDirection: Array<number>, public lightColor: Array<number>) {
+        super(shader);
         this.shader.gl.useProgram(this.shader.program);
         this.lightDirectionUniform = this.shader.gl.getUniformLocation(this.shader.program, 'u_light_direction');
         this.lightColorUniform = this.shader.gl.getUniformLocation(this.shader.program, 'u_light_color');
-        if (this.diffuseColorMaterial != null) {
-            this.materialDiffuseColorUniform = this.shader.gl.getUniformLocation(this.shader.program, 'u_diffuse_color');
-            this.shader.gl.uniform3fv(this.materialDiffuseColorUniform, this.diffuseColorMaterial);
-        }
     }
 
-    private getLocationsAmbient() {
-        this.ambientColorUniform = this.shader.gl.getUniformLocation(this.shader.program, 'u_ambient_color');
+    /**
+    * Given the transform matrix, transform the spacial light parameters
+    * Call only once for frame
+    * @param matrix 
+    */
+    public set(matrix: Array<number> = null) {
+        this.shader.gl.useProgram(this.shader.program);
+        let transpose = utils.transposeMatrix(matrix);
+        let inverseTranspose = utils.invertMatrix(transpose);
+        let light4 = utils.copy(this.lightDirection); light4[3] = 0;
+        let transformedDirection = utils.multiplyMatrixVector(utils.identityMatrix(), light4);//inverseTranspose, light4);
+        this.shader.gl.uniform3fv(this.lightColorUniform, this.lightColor);
+        this.shader.gl.uniform3fv(this.lightDirectionUniform, transformedDirection.slice(0, 3));
+    }
+
+    setShadowMap(staticObjectsRoot: SceneGraphNode) {
+        super.setShadowMap(staticObjectsRoot);
+        // Put the scene in light coordinates
+        let view = utils.MakeView(0, 0, 1000, Math.atan(this.lightDirection[1] / this.lightDirection[0]), Math.acos(this.lightDirection[2] / this.lightDirection[0]));
+        super.drawShadowMap(staticObjectsRoot, view);
     }
 }
+
+class AmbientLight extends Light {
+    private ambientColorUniform: WebGLUniformLocation;
+
+    constructor(shader: Shader, private ambientColor: Array<number>) {
+        super(shader);
+        this.ambientColorUniform = this.shader.gl.getUniformLocation(this.shader.program, 'u_ambient_color');
+    }
+
+    /**
+     * Set parameters on the shader
+     */
+    public set() {
+        this.shader.gl.uniform3fv(this.ambientColorUniform, this.ambientColor);
+    }
+
+    setShadowMap(staticObjectsRoot: SceneGraphNode) {
+        //TODO
+    }
+
+}
+
 
 /**
  * Create and manage a texture
@@ -227,4 +272,4 @@ class Texture {
     }
 }
 
-export { Light, Shader, Texture, shaderType, lightType };
+export { Light, DirectionalLight, AmbientLight, Shader, Texture, shaderType };

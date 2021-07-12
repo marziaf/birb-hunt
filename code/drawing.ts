@@ -7,7 +7,7 @@ import { SceneGraphNode } from "./structures/scene_graph.js";
 import { Camera } from "./movement/camera_movement.js";
 import { Skybox } from './structures/skybox.js'
 import { mov } from "./movement/scene_object_movement.js"
-import { Light, Shader, Texture, shaderType, lightType } from "./libs/shader_handler.js";
+import { Light, DirectionalLight, AmbientLight, Shader, Texture, shaderType } from "./libs/shader_handler.js";
 
 var gl: WebGL2RenderingContext;
 var skyboxProgram: WebGLProgram;
@@ -47,10 +47,8 @@ async function init() {
     let dirLight = [Math.cos(dirLightAlpha) * Math.cos(dirLightBeta),
     Math.sin(dirLightAlpha),
     Math.cos(dirLightAlpha)];
-    let directionalLight = new Light(lightType.DIRECTIONAL, dirLight, [1, 1, 1]);
-    directionalLight.linkShader(realistic);
-    let ambientLight = new Light(lightType.AMBIENT, null, null, null, [1, 0.8, 0.2])
-    ambientLight.linkShader(realistic);
+    let directionalLight = new DirectionalLight(realistic, dirLight, [1, 1, 1]);
+    let ambientLight = new AmbientLight(realistic, [1, 0.8, 0.2]);
     // Textures
     let sceneObjectsTexture = new Texture("./assets/scene_objects/Texture_01.jpg");
     sceneObjectsTexture.linkShader(lambertShader);
@@ -86,6 +84,7 @@ function drawGraph(node: SceneGraphNode) {
  */
 function drawScene(root: SceneGraphNode) {
     // clear screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     utils.resizeCanvasToDisplaySize(gl.canvas);
@@ -101,7 +100,7 @@ function drawScene(root: SceneGraphNode) {
     sky.draw(utils.invertMatrix(VPmatrix));
     // set the lights only once
     onGrassStaticRenderer.lights.forEach(light => {
-        light.transform(VPmatrix);
+        light.set(VPmatrix);
     });
 
     // draw scene objects
@@ -149,7 +148,7 @@ async function setupEnvironment() {
     // objects on grass
     for (const { name, qty } of objectNamesQtys) {
 
-        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, 0.6, 0.1, [1, 1, 1]);
+        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, 0.1, 0.9, [1, 1, 1]);
         await obj.create();
 
         for (let i = 0; i < qty; i++) {
@@ -163,6 +162,9 @@ async function setupEnvironment() {
     };
     root.updateWorldMatrix();
 
+    // get shadow map
+    onGrassStaticRenderer.lights[0].setShadowMap(root);
+
     // Get the camera
     // create after the others to avoid problems with early event interception
     let aspectRatio = canvas.width / canvas.height;
@@ -170,6 +172,10 @@ async function setupEnvironment() {
     camera.setCameraParameters(40, aspectRatio, 0.1, 2000);
 
     return root;
+}
+
+function getShaderMap(light: Light) {
+
 }
 
 function main() {
