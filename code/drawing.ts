@@ -8,6 +8,7 @@ import { Camera } from "./movement/camera_movement.js";
 import { Skybox } from './structures/skybox.js'
 import { mov } from "./movement/scene_object_movement.js"
 import { Light, DirectionalLight, AmbientLight, Shader, LambertShader, PBRShader, Texture } from "./libs/shader_handler.js";
+import { Birb } from "./movement/birb_movement.js";
 
 var gl: WebGL2RenderingContext;
 var skyboxProgram: WebGLProgram;
@@ -22,7 +23,9 @@ var root: SceneGraphNode;
 var VPmatrix: Array<number>;
 var Vmatrix: Array<number>;
 
-var onGrassStaticRenderer: { shader: Shader, lights: Array<Light>, texture: Texture };
+var render: { shader: Shader, lights: Array<Light>, texture: Texture };
+
+var birbHandle: Birb;
 
 /**
  * Get canvas with webgl
@@ -45,10 +48,10 @@ async function init() {
     let dirLight = [Math.cos(dirLightAlpha) * Math.cos(dirLightBeta),
     Math.sin(dirLightAlpha),
     Math.cos(dirLightAlpha)];
-    let directionalLight = new DirectionalLight(realistic, dirLight, [1, 1, 1]);
+    let directionalLight = new DirectionalLight(realistic, dirLight, [1, 0.8, 0.7]);
     // Textures
     let sceneObjectsTexture = new Texture(realistic, "./assets/scene_objects/Texture_01.jpg");
-    onGrassStaticRenderer = { shader: realistic, lights: [directionalLight], texture: sceneObjectsTexture };
+    render = { shader: realistic, lights: [directionalLight], texture: sceneObjectsTexture };
 
     // sky
     let shaderDir: string = "http://127.0.0.1/birb_hunt/code/shaders/";
@@ -94,10 +97,12 @@ function drawScene(root: SceneGraphNode) {
     VPmatrix = matrices.viewProjection;
     // draw skybox
     sky.draw(utils.invertMatrix(VPmatrix));
-    // set the lights only once
-    onGrassStaticRenderer.lights.forEach(light => {
+    // set the lights and the shadows only once
+    render.lights.forEach(light => {
         light.set(VPmatrix);
     });
+    // move birb
+    birbHandle.randomWalk(deltaT, VPmatrix);
     // draw scene objects
     drawGraph(root);
     //loop
@@ -122,18 +127,28 @@ async function setupEnvironment() {
         { name: "smallrock", qty: 15, spec: 0.5, rough: 1 },
         { name: "stump", qty: 20, spec: 0.05, rough: 1 },
         { name: "tree1", qty: 30, spec: 0.2, rough: 1 },
-        { name: "tree2", qty: 20, spec: 0.2, rough: 1 },
-        { name: "tree3", qty: 20, spec: 0.2, rough: 1 },
-        { name: "tree4", qty: 20, spec: 0.2, rough: 1 }];
+        { name: "tree2", qty: 20, spec: 0.3, rough: 1 },
+        { name: "tree3", qty: 20, spec: 0.05, rough: 1 },
+        { name: "tree4", qty: 20, spec: 0.1, rough: 1 }];
 
     // Create the scene graph
     // root
     let root = new SceneGraphNode(null, "root");
+    // birb
+    let birb = new Entity('./assets/red.obj', render.shader, 0.3, 1, [1, 0.2, 0.1], false);
+    await birb.create();
+
+    let birbLevel = new SceneGraphNode(null, "birbLevel");
+    birbLevel.setParent(root);
+    let birbNode = new SceneGraphNode(birb, "birb");
+    birbNode.setParent(birbLevel);
+    birbHandle = new Birb(birbLevel);
+
     // grass
     let grassLevel = new SceneGraphNode(null, "grassLevel");
     grassLevel.setParent(root);
 
-    let grass = new Entity(objFileDir + 'grass.obj', onGrassStaticRenderer.shader, 0, 1, [0, 1, 0.3]);
+    let grass = new Entity(objFileDir + 'grass.obj', render.shader, 0, 1, [0, 1, 0.3]);
     await grass.create();
 
     let grassNode = new SceneGraphNode(grass, "grass");
@@ -143,7 +158,7 @@ async function setupEnvironment() {
     // objects on grass
     for (const { name, qty, spec, rough } of objectNamesQtys) {
 
-        let obj = new Entity(objFileDir + name + ".obj", onGrassStaticRenderer.shader, spec, rough, [1, 1, 1]);
+        let obj = new Entity(objFileDir + name + ".obj", render.shader, spec, rough, [1, 1, 1]);
         await obj.create();
 
         for (let i = 0; i < qty; i++) {
@@ -155,7 +170,7 @@ async function setupEnvironment() {
     root.updateWorldMatrix();
 
     // get shadow map
-    //onGrassStaticRenderer.lights[0].setShadowMap(root);
+    render.lights[0].setShadowMap(root);
 
     // Get the camera
     // create after the others to avoid problems with early event interception

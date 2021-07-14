@@ -1056,7 +1056,7 @@ Quaternion['fromEuler'] = function(phi, theta, psi, order) {
     return null;
 };
 
-export default Quaternion;
+export { Quaternion };
 // if (typeof define === 'function' && define['amd']) {
 //     define([], function() {
 //         return Quaternion;

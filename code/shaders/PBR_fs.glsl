@@ -12,10 +12,11 @@ out vec4 outColor;
 uniform mat4 u_normal_matrix;
 // Texture
 uniform sampler2D u_texture;
-uniform sampler2D u_shadowMap;
-uniform sampler2D u_frame_buffer;
+uniform sampler2D u_shadow_map;
+// Shadows
+in vec3 posLightSpace;
 
-// BRDFwwwwwwww
+// BRDF
 in vec3 radiance_direction; // omega_r
 uniform vec3 u_light_direction; // lx
 uniform vec3 u_light_color;
@@ -24,12 +25,10 @@ uniform float metalness;
 uniform vec3 specularColor;
 
 
-void main() {
+vec3 getPBR(vec3 diffuse_color) {
   vec3 nNormal = normalize(fs_normal);
   vec3 lightDir = normalize(u_light_direction);
   vec3 omega = normalize(radiance_direction);
-
-  vec3 diffuse_color = vec3(texture(u_texture, fs_uv));
 
   // COOK-TORRANCE
   // Blinn reflection's half vector
@@ -58,6 +57,21 @@ void main() {
   vec3 fDiffuse = ln * diffuse_color;
 
   vec3 PBR = (1.0 - F) * (1.0 - metalness) * fDiffuse + fSpecular;
+  return PBR;
+}
 
+float getShadows() {
+  float shadowDepth = (texture(u_shadow_map, posLightSpace.xy).r);
+  float shadow = (posLightSpace.z < shadowDepth) ? 1.0 : 0.0; 
+  return shadowDepth;
+}
+
+void main() {
+  vec3 diffuse_color = vec3(texture(u_texture, fs_uv));
+
+  vec3 PBR = getPBR(diffuse_color);
+  float shadows = getShadows();
+ 
   outColor = vec4(u_light_color * PBR, 1.0);
+  //outColor = vec4(shadows, 0.0, 0.0, 1.0);
 }

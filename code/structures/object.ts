@@ -9,10 +9,10 @@ import { Shader } from "../libs/shader_handler.js"
 class Entity {
     // obj data
     vao: WebGLVertexArrayObject;
-    private numVertices: number;
+    numVertices: number;
 
 
-    constructor(private file_obj: string, private shader: Shader,
+    constructor(private file_obj: string, public shader: Shader,
         private metalness: number, private roughness: number, private specularColor: Array<number>,
         private hasVertexSmoothing: boolean = true) { }
 

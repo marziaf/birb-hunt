@@ -1,4 +1,4 @@
-import { collapseTextChangeRangesAcrossMultipleVersions, isAssertionExpression, isNullishCoalesce } from "typescript";
+import { collapseTextChangeRangesAcrossMultipleVersions, isAssertionExpression, isNullishCoalesce, isThisTypeNode } from "typescript";
 import { utils } from "../libs/utils.js"
 import { Camera } from "../movement/camera_movement.js";
 import { Entity } from "../structures/object.js";
@@ -22,6 +22,7 @@ abstract class Shader {
     uvAttributeLocation: number;
     matrixUniform: WebGLUniformLocation;
     normalMatrixUniform: WebGLUniformLocation;
+    localMatrixUniform: WebGLUniformLocation;
 
 
     /**
@@ -42,6 +43,7 @@ abstract class Shader {
         this.uvAttributeLocation = this.gl.getAttribLocation(this.program, "in_uv");
         this.matrixUniform = this.gl.getUniformLocation(this.program, "u_matrix");
         this.normalMatrixUniform = this.gl.getUniformLocation(this.program, 'u_normal_matrix');
+        this.localMatrixUniform = this.gl.getUniformLocation(this.program, 'u_local_matrix');
     }
     setParameters(a: number, b: number, c: Array<number>) { }
 
@@ -56,6 +58,7 @@ abstract class Shader {
         this.gl.useProgram(this.program);
         this.gl.uniformMatrix4fv(this.matrixUniform, false, transposeWVP);
         this.gl.uniformMatrix4fv(this.normalMatrixUniform, false, transposeLoc);
+        this.gl.uniformMatrix4fv(this.localMatrixUniform, false, Loc);
     }
 
 }
@@ -103,14 +106,22 @@ class PBRShader extends Shader {
 abstract class Light {
     // locations
     protected shadowMapUniform: WebGLUniformLocation;
-    protected frameBufferUniform: WebGLUniformLocation;
+    protected shadowMapMatrix: WebGLUniformLocation;
     // shadow map
     protected frameBuffer: WebGLFramebuffer;
+    protected depthShadowMap: WebGLTexture;
     private readonly mapSize = 512;
 
     constructor(protected shader: Shader) { }
 
-    public set(matrix: Array<number>) { }
+    public set(WVP: Array<number>) {
+        let gl = this.shader.gl;
+        gl.useProgram(this.shader.program);
+        // link the depth texture
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.depthShadowMap);
+        gl.uniform1i(this.shadowMapUniform, 1);
+    }
 
     public setShadowMap(staticObjectsRoot: SceneGraphNode) {
         if (this.frameBuffer == null || typeof this.frameBuffer == 'undefined') {
@@ -125,42 +136,40 @@ abstract class Light {
         this.frameBuffer = gl.createFramebuffer()
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer)
         // create a texture to hold the colors (useless)
+        gl.activeTexture(gl.TEXTURE1);
         let color = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, color);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.mapSize, this.mapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color, 0);
         // create a texture to hold the depth
-        let depthShadowMap = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, depthShadowMap);
+        gl.activeTexture(gl.TEXTURE2);
+        this.depthShadowMap = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.depthShadowMap);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, this.mapSize, this.mapSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthShadowMap, 0);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthShadowMap, 0);
         // link to shader
-        this.shadowMapUniform = gl.getUniformLocation(this.shader.program, "u_shadowMap");
-        this.frameBufferUniform = gl.getUniformLocation(this.shader.program, "u_frame_buffer");
+        this.shadowMapUniform = gl.getUniformLocation(this.shader.program, "u_shadow_map");
+        this.shadowMapMatrix = gl.getUniformLocation(this.shader.program, "u_shadow_matrix");
     }
 
     protected drawShadowMap(staticObjectsRoot: SceneGraphNode, view: Array<number>) {
         let gl = this.shader.gl;
         // draw on frame buffer
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer);
-        gl.viewport(0, 0, this.mapSize, this.mapSize);
+        console.assert(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == 36053);
         gl.clear(gl.DEPTH_BUFFER_BIT);
-        gl.enable(gl.DEPTH_TEST);
-        gl.useProgram(this.shader.program);
-        this.drawGraph(staticObjectsRoot, view, this.shader);
+        gl.viewport(0, 0, this.mapSize, this.mapSize);
+        this.drawGraph(staticObjectsRoot, view);
     }
 
-    private drawGraph(node: SceneGraphNode, VP: Array<number>, shader: Shader) {
+    protected drawGraph(node: SceneGraphNode, view: Array<number>) {
         if (!node.isDummy()) {
             let W = node.getWorldMatrix();
-            let WVP = utils.multiplyMatrices(VP, W);
-            shader.transform(WVP, W);
-            shader.gl.bindVertexArray(node.entity.vao);
-            shader.gl.drawElements
+            node.entity.draw(view, W);
         }
-        node.getChildren().forEach(child => this.drawGraph(child, VP, shader));
+        node.getChildren().forEach(child => this.drawGraph(child, view));
     }
 
 }
@@ -169,6 +178,7 @@ class DirectionalLight extends Light {
     private lightDirectionUniform: WebGLUniformLocation;
     private lightColorUniform: WebGLUniformLocation;
     private materialDiffuseColorUniform: WebGLUniformLocation;
+    private viewMatrix: Array<number>;
 
     constructor(shader: Shader, public lightDirection: Array<number>, public lightColor: Array<number>) {
         super(shader);
@@ -178,11 +188,12 @@ class DirectionalLight extends Light {
     }
 
     /**
-    * Given the transform matrix, transform the spacial light parameters
+    * Given the transform matrix, transform the spatial light parameters
     * Call only once for frame
     * @param matrix 
     */
-    public set(matrix: Array<number> = null) {
+    public set(matrix: Array<number>) {
+        super.set(matrix);
         this.shader.gl.useProgram(this.shader.program);
         let transpose = utils.transposeMatrix(matrix);
         let inverseTranspose = utils.invertMatrix(transpose);
@@ -190,13 +201,15 @@ class DirectionalLight extends Light {
         let transformedDirection = utils.multiplyMatrixVector(utils.identityMatrix(), light4);//inverseTranspose, light4);
         this.shader.gl.uniform3fv(this.lightColorUniform, this.lightColor);
         this.shader.gl.uniform3fv(this.lightDirectionUniform, transformedDirection.slice(0, 3));
+        // link the matrix to transform the texture object coordinates to light
+        this.shader.gl.uniformMatrix4fv(this.shadowMapMatrix, false, this.viewMatrix);
     }
 
-    setShadowMap(staticObjectsRoot: SceneGraphNode) {
+    public setShadowMap(staticObjectsRoot: SceneGraphNode) {
         super.setShadowMap(staticObjectsRoot);
         // Put the scene in light coordinates
-        let view = utils.MakeView(0, 0, 1000, Math.atan(this.lightDirection[1] / this.lightDirection[0]), Math.acos(this.lightDirection[2] / this.lightDirection[0]));
-        super.drawShadowMap(staticObjectsRoot, view);
+        this.viewMatrix = utils.MakeView(10, 10, 10, Math.atan(this.lightDirection[1] / this.lightDirection[0]), Math.acos(this.lightDirection[2] / this.lightDirection[0]));
+        super.drawShadowMap(staticObjectsRoot, this.viewMatrix);
     }
 }
 
@@ -215,7 +228,7 @@ class AmbientLight extends Light {
         this.shader.gl.uniform3fv(this.ambientColorUniform, this.ambientColor);
     }
 
-    setShadowMap(staticObjectsRoot: SceneGraphNode) {
+    public setShadowMap(staticObjectsRoot: SceneGraphNode) {
         //TODO
     }
 
@@ -246,6 +259,7 @@ class Texture {
         var image = new Image();
         image.src = textureFile;
         var gl = shader.gl;
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
