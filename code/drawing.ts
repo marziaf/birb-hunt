@@ -137,11 +137,18 @@ async function setupEnvironment() {
     // birb
     let birb = new Entity('./assets/red.obj', render.shader, 0.3, 1, [1, 0.2, 0.1], false);
     await birb.create();
+    let birbNest = new Entity(objFileDir + 'coral.obj', render.shader, 1, 0.5, [1, 0.8, 0.5], false);
+    await birbNest.create();
 
-    let birbLevel = new SceneGraphNode(null, "birbLevel");
-    birbLevel.setParent(root);
+    let birbNestLevel = new SceneGraphNode(null, "birbNestLevel");
+    birbNestLevel.setParent(root);
+    let nestNode = new SceneGraphNode(birbNest, "nest");
+    nestNode.setParent(birbNestLevel);
+    let birbLevel = new SceneGraphNode(null, "birbLevel")
     let birbNode = new SceneGraphNode(birb, "birb");
+    birbLevel.setParent(birbNestLevel);
     birbNode.setParent(birbLevel);
+    mov.initGroupPosition(birbNestLevel, 5, 0, 5);//TODO
     birbHandle = new Birb(birbLevel);
 
     // grass
