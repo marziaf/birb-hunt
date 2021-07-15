@@ -21,6 +21,7 @@
       "./code/movement/camera_movement.ts",
       "./code/movement/scene_object_movement.ts",
       "./code/movement/birb_movement.ts",
+      "./code/movement/collision.ts",
       "./code/libs/shader_handler.ts",
       "./code/quaternion.d.ts",
   ],

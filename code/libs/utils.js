@@ -177,6 +177,17 @@ var utils = {
         return v;
     },
 
+    sub: function(v, w) {
+        for (let i = 0; i < v.length; i++) {
+            v[i] -= w[i];
+        }
+        return v;
+    },
+
+    distance: function(v, w) {
+        return norm(sub(v, w));
+    },
+
     //requires as a parameter a 4x4 matrix (array of 16 values)
     invertMatrix: function(m) {
 

@@ -14,6 +14,7 @@ class Entity {
 
     constructor(private file_obj: string, public shader: Shader,
         private metalness: number, private roughness: number, private specularColor: Array<number>,
+
         private hasVertexSmoothing: boolean = true) { }
 
     /**

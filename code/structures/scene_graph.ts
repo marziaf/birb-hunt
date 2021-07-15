@@ -1,16 +1,15 @@
 import { utils } from '../libs/utils.js';
 import { Entity } from './object.js';
+import { Collider } from '../movement/collision.js'
 
 class SceneGraphNode {
-    entity: Entity;
-    id: string;
     private _isDummy: boolean;
     private _parent: SceneGraphNode;
     private _children: Array<any>;
     private _localMatrix: Array<number>;
     private _worldMatrix: Array<number>;
 
-    constructor(entity: Entity = null, id: string = null) {
+    constructor(public entity: Entity = null, public readonly id: string = null, public collider: Collider = null) {
         if (entity == null) {
             this.entity = null;
             this._isDummy = true;
@@ -70,6 +69,10 @@ class SceneGraphNode {
 
     getChildren() {
         return this._children;
+    }
+
+    hasCollider() {
+        return this.collider == null;
     }
 }
 export { SceneGraphNode };
