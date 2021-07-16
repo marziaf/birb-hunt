@@ -171,21 +171,24 @@ var utils = {
     },
 
     sum: function(v, w) {
+        let o = v.slice();
         for (let i = 0; i < v.length; i++) {
-            v[i] += w[i];
+            o[i] += w[i];
         }
-        return v;
+        return o;
     },
 
     sub: function(v, w) {
+        let o = v.slice();
         for (let i = 0; i < v.length; i++) {
-            v[i] -= w[i];
+            o[i] -= w[i];
         }
-        return v;
+        return o;
     },
 
     distance: function(v, w) {
-        return norm(sub(v, w));
+        let sub = this.sub(v, w);
+        return this.norm(sub);
     },
 
     //requires as a parameter a 4x4 matrix (array of 16 values)

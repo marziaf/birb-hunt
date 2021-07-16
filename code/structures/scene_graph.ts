@@ -49,6 +49,9 @@ class SceneGraphNode {
         }
         // now process all the children
         var worldMatrix = this._worldMatrix;
+        if (this.hasCollider()) {
+            this.collider.setLocation(utils.multiplyMatrixVector(worldMatrix, [0, 0, 0, 1]).splice(0, 3));
+        }
         this._children.forEach(function (child) {
             child.updateWorldMatrix(worldMatrix);
         });
@@ -56,6 +59,8 @@ class SceneGraphNode {
 
     setLocalMatrix(matrix: Array<number>) {
         this._localMatrix = matrix;
+        if (this.hasCollider())
+            this.collider.setLocation(utils.multiplyMatrixVector(matrix, [0, 0, 0, 1]).splice(0, 3));
     }
 
     // world matrix: local -> global
@@ -71,8 +76,8 @@ class SceneGraphNode {
         return this._children;
     }
 
-    hasCollider() {
-        return this.collider == null;
+    hasCollider(): boolean {
+        return this.collider != null;
     }
 }
 export { SceneGraphNode };

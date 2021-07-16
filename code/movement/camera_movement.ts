@@ -1,9 +1,12 @@
 import { utils } from '../libs/utils.js';
+import { SceneGraphNode } from '../structures/scene_graph.js';
+import { Collider, SphereCollider } from './collision.js';
 
 class Camera {
     // Keep track of position and orientation
     private _canvas: HTMLCanvasElement;
-    private _translation: { x: number, y: number, z: number };
+    public translation: { x: number, y: number, z: number };
+    private _lastValidTranslation: { x: number, y: number, z: number };
     private _angles: { direction: number, elevation: number };
     private _deltaTime: number;
     private _keyState: Map<string, boolean>;
@@ -14,11 +17,13 @@ class Camera {
     // Camera perspective
     private _perspectiveMatrix: Array<number>;
 
-    constructor(canvas: HTMLCanvasElement, height: number = 2, translationSpeed: number = 25, rotationSpeed = { x: 30, y: 30 }) {
+
+    constructor(canvas: HTMLCanvasElement, private root: SceneGraphNode, height: number = 2, translationSpeed: number = 25, rotationSpeed = { x: 30, y: 30 }) {
         this._canvas = canvas;
         this._translationSpeed = translationSpeed;
         this._rotationSpeed = rotationSpeed;
-        this._translation = { x: 0, y: height, z: 0 };
+        this.translation = { x: 0, y: height, z: 0 };
+        this._lastValidTranslation = { x: 0, y: height, z: 0 };
         this._angles = { direction: 0, elevation: 0 };
         this.setCameraParameters(-200, 1, 0.1, 2000);
         this._elevationBoundaries = { low: -40, high: 80 };
@@ -60,7 +65,7 @@ class Camera {
     /**
      * Read key press and move the camera
      */
-    _keyFunction() {
+    private _keyFunction() {
         let deltaLinearSpace = this._deltaTime * this._translationSpeed;
         // move according to current camera direction, considering the angle wrt z axis (rotation on y)
         let z = 0;
@@ -77,11 +82,11 @@ class Camera {
         if (this._keyState['ArrowLeft'] || this._keyState['a']) {
             x--;
         }
-
+        // update position only if it does not cause collisions
+        // check collisions in local space
         let resAngle = Math.atan2(x, -z) + this._angles.direction * Math.PI / 180;
-
-        this._translation.x += Math.sin(resAngle) * deltaLinearSpace;
-        this._translation.z += Math.cos(resAngle) * deltaLinearSpace;
+        this.translation.x += Math.sin(resAngle) * deltaLinearSpace;
+        this.translation.z += Math.cos(resAngle) * deltaLinearSpace;
     }
 
     /**
@@ -93,9 +98,15 @@ class Camera {
         this._deltaTime = deltaTime;
 
         // makeview already contains the inversion of the translation
-        let view = utils.MakeView(this._translation.x, this._translation.y, this._translation.z, this._angles.elevation, this._angles.direction);
+        let view = utils.MakeView(this.translation.x, this.translation.y, this.translation.z, this._angles.elevation, this._angles.direction);
         let viewProjection = utils.multiplyMatrices(this._perspectiveMatrix, view);
         return { viewProjection, view };
+    }
+
+    updateLastValidPosition(player: Collider, root: SceneGraphNode) {
+        player.setLocation([this.translation.x, this.translation.y, this.translation.z]);
+        if (player.collidingAny(root)) this.translation = this._lastValidTranslation;
+        else this._lastValidTranslation = this.translation;
     }
 }
 export { Camera };
