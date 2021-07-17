@@ -6,6 +6,7 @@ class Camera {
     // Keep track of position and orientation
     private _canvas: HTMLCanvasElement;
     public translation: { x: number, y: number, z: number };
+    public _newPossibleTranslation: { x: number, y: number, z: number };
     private _lastValidTranslation: { x: number, y: number, z: number };
     private _angles: { direction: number, elevation: number };
     private _deltaTime: number;
@@ -23,6 +24,7 @@ class Camera {
         this._translationSpeed = translationSpeed;
         this._rotationSpeed = rotationSpeed;
         this.translation = { x: 0, y: height, z: 0 };
+        this._newPossibleTranslation = { ...this.translation };
         this._lastValidTranslation = { x: 0, y: height, z: 0 };
         this._angles = { direction: 0, elevation: 0 };
         this.setCameraParameters(-200, 1, 0.1, 2000);
@@ -85,8 +87,8 @@ class Camera {
         // update position only if it does not cause collisions
         // check collisions in local space
         let resAngle = Math.atan2(x, -z) + this._angles.direction * Math.PI / 180;
-        this.translation.x += Math.sin(resAngle) * deltaLinearSpace;
-        this.translation.z += Math.cos(resAngle) * deltaLinearSpace;
+        this._newPossibleTranslation.x = this.translation.x + Math.sin(resAngle) * deltaLinearSpace;
+        this._newPossibleTranslation.z = this.translation.z + Math.cos(resAngle) * deltaLinearSpace;
     }
 
     /**
@@ -103,11 +105,10 @@ class Camera {
     }
 
     updateLastValidPosition(player: Collider, root: SceneGraphNode) {
-        player.setLocation([this.translation.x, this.translation.y, this.translation.z]);
-        if (player.collidingAny(root)) {
-            this.translation = { ...this._lastValidTranslation };
+        player.setLocation([this._newPossibleTranslation.x, this._newPossibleTranslation.y, this._newPossibleTranslation.z]);
+        if (!player.collidingAny(root)) {
+            this.translation = { ...this._newPossibleTranslation };
         }
-        else { this._lastValidTranslation = { ...this.translation } }
     }
 }
 export { Camera };

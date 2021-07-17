@@ -52,7 +52,7 @@ class CylinderCollider extends Collider {
 class SphereCollider extends Collider {
     colliding(other: Collider): boolean {
         let distance = utils.distance(this.location, other.getLocation());
-        // console.log(this.getLocation(), other.getLocation(), distance);
+        console.log(this.getLocation(), other.getLocation(), distance);
 
         if (distance < this.radius) return true;
         return false;
