@@ -96,7 +96,6 @@ class Camera {
      */
     getViewProjectionMatrix(deltaTime: number) {
         this._deltaTime = deltaTime;
-
         // makeview already contains the inversion of the translation
         let view = utils.MakeView(this.translation.x, this.translation.y, this.translation.z, this._angles.elevation, this._angles.direction);
         let viewProjection = utils.multiplyMatrices(this._perspectiveMatrix, view);
@@ -105,8 +104,10 @@ class Camera {
 
     updateLastValidPosition(player: Collider, root: SceneGraphNode) {
         player.setLocation([this.translation.x, this.translation.y, this.translation.z]);
-        if (player.collidingAny(root)) this.translation = this._lastValidTranslation;
-        else this._lastValidTranslation = this.translation;
+        if (player.collidingAny(root)) {
+            this.translation = { ...this._lastValidTranslation };
+        }
+        else { this._lastValidTranslation = { ...this.translation } }
     }
 }
 export { Camera };

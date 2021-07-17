@@ -34,13 +34,11 @@ abstract class Collider {
                 return true;
             }
         }
-        root.getChildren().forEach(child => this.collidingAny(child));
-
-        return false;
+        return root.getChildren().some(child => this.collidingAny(child));
     }
 }
 
-/*
+
 class CylinderCollider extends Collider {
     colliding(other: Collider): boolean {
         let proj1 = [this.location[0], this.location[2]];
@@ -50,7 +48,7 @@ class CylinderCollider extends Collider {
         return false;
     }
 }
-*/
+
 class SphereCollider extends Collider {
     colliding(other: Collider): boolean {
         let distance = utils.distance(this.location, other.getLocation());

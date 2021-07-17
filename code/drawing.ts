@@ -197,10 +197,11 @@ function drawScene(root: SceneGraphNode) {
     });
     // move birb
     birbHandle.randomWalk(deltaT, VPmatrix);
-    // draw scene objects
-    drawGraph(root);
     // check if there was a collider violation
     camera.updateLastValidPosition(playerCollider, root);
+    // draw scene objects
+    drawGraph(root);
+
     //loop
     window.requestAnimationFrame(() => drawScene(root));
 }
