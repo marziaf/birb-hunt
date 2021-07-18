@@ -29,7 +29,7 @@ var playerCollider: SphereCollider;
 var render: { shader: Shader, lights: Array<Light>, texture: Texture };
 
 var birbHandle: Birb;
-let objFileDir = "./assets/scene_objects/";
+let objFileDir = "../assets/scene_objects/";
 let shaderDir = "http://127.0.0.1:80/birb_hunt/code/shaders/";
 
 /***********************************
@@ -63,7 +63,7 @@ async function init() {
     Math.cos(dirLightAlpha)];
     let directionalLight = new DirectionalLight(realistic, dirLight, [1, 0.8, 0.7]);
     // Textures
-    let sceneObjectsTexture = new Texture(realistic, "./assets/scene_objects/Texture_01.jpg");
+    let sceneObjectsTexture = new Texture(realistic, "../assets/scene_objects/Texture_01.jpg");
     render = { shader: realistic, lights: [directionalLight], texture: sceneObjectsTexture };
     // create scene
     root = await setupEnvironment();
@@ -72,7 +72,7 @@ async function init() {
 window.onload = init;
 
 async function getBirb(root: SceneGraphNode) {
-    let birb = new Entity('./assets/red.obj', render.shader, 0.3, 1, [1, 0.2, 0.1], false);
+    let birb = new Entity('../assets/red.obj', render.shader, 0.3, 1, [1, 0.2, 0.1], false);
     await birb.create();
     let birbNest = new Entity(objFileDir + 'coral.obj', render.shader, 1, 0.5, [1, 0.8, 0.5], false);
     await birbNest.create();
@@ -140,7 +140,7 @@ async function getForest(root: SceneGraphNode) {
 async function setupEnvironment() {
 
     // Create the skybox
-    sky = new Skybox('./assets/skyboxes/', gl, skyboxProgram,
+    sky = new Skybox('../assets/skyboxes/', gl, skyboxProgram,
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
 
     playerCollider = new SphereCollider(1);
