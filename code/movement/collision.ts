@@ -27,10 +27,10 @@ abstract class Collider {
 
     // check if two objects are colliding with each other (bidirectional)
     collidingAny(root: SceneGraphNode): boolean {
-        if (root.hasCollider() && !(this === root.collider)) {
+        if (root.hasCollider() && this !== root.collider) {
             if (this.colliding(root.collider) ||
                 root.collider.colliding(this)) {
-                console.log("collision with ", root.id);
+                //console.log("collision with ", root.id);
                 return true;
             }
         }
@@ -52,9 +52,8 @@ class CylinderCollider extends Collider {
 class SphereCollider extends Collider {
     colliding(other: Collider): boolean {
         let distance = utils.distance(this.location, other.getLocation());
-        console.log(this.getLocation(), other.getLocation(), distance);
-
-        if (distance < this.radius) return true;
+        //console.log(this.getLocation(), other.getLocation(), distance);
+        if (distance <= this.radius) return true;
         return false;
     }
 }

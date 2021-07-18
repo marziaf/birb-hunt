@@ -16,7 +16,7 @@ import { SceneGraphNode } from "../structures/scene_graph.js";
 abstract class Shader {
     program: WebGLProgram;
     // Common variables for shaders
-    shaderDir = "http://127.0.0.1/birb_hunt/code/shaders/";
+    shaderDir = "http://127.0.0.1:80/birb_hunt/code/shaders/";
     positionAttributeLocation: number;
     normalAttributeLocation: number;
     uvAttributeLocation: number;

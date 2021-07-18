@@ -27,7 +27,7 @@ class Birb {
 
         let movement = utils.multiplyMatrices(displacement, look);
         movement = utils.multiplyMatrices(rotation, movement);
-        this.birb.updateWorldMatrix(movement);
+        this.birb.setLocalMatrix(movement);
     }
 }
 

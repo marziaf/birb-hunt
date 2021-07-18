@@ -30,7 +30,7 @@ var render: { shader: Shader, lights: Array<Light>, texture: Texture };
 
 var birbHandle: Birb;
 let objFileDir = "./assets/scene_objects/";
-let shaderDir = "http://127.0.0.1/birb_hunt/code/shaders/";
+let shaderDir = "http://127.0.0.1:80/birb_hunt/code/shaders/";
 
 /***********************************
  * SETUP THE SCENE, CREATE OBJECTS
@@ -42,6 +42,7 @@ let shaderDir = "http://127.0.0.1/birb_hunt/code/shaders/";
  * @returns 
  */
 async function init() {
+    console.log("start");
     // Get a WebGL context
     canvas = <HTMLCanvasElement>document.getElementById("my-canvas");
     gl = canvas.getContext("webgl2");
@@ -77,40 +78,41 @@ async function getBirb(root: SceneGraphNode) {
     await birbNest.create();
 
     let birbNestLevel = new SceneGraphNode(null, "birbNestLevel");
-    //birbNestLevel.setParent(root);
-    let nestNode = new SceneGraphNode(birbNest, "nest", new SphereCollider(2));
+    birbNestLevel.setParent(root);
+    let nestNode = new SceneGraphNode(birbNest, "nest", new SphereCollider(4));
     nestNode.setParent(birbNestLevel);
-    let birbLevel = new SceneGraphNode(null, "birbLevel")
-    let birbNode = new SceneGraphNode(birb, "birb", new SphereCollider(2));
+    let birbLevel = new SceneGraphNode(null, "birbLevel");
     birbLevel.setParent(birbNestLevel);
+    let birbNode = new SceneGraphNode(birb, "birb", new SphereCollider(2));
     birbNode.setParent(birbLevel);
-    mov.initGroupPosition(birbNestLevel, 5, 0, 5);//TODO
+    mov.initGlobalPosition(birbNestLevel, 15, 10);
     birbHandle = new Birb(birbLevel);
 }
 
 async function getForest(root: SceneGraphNode) {
     // Create the possible objects to insert in the scene
     let objectProperties = [
-        { name: "flower", qty: 60, spec: 0.1, rough: 0.7, collider: 0 },
-        { name: "plant", qty: 30, spec: 0.4, rough: 0.7, collider: 0 },
-        { name: "rock1", qty: 2, spec: 0.2, rough: 1, collider: 8 },
-        { name: "rock2", qty: 2, spec: 0.2, rough: 1, collider: 10 },
-        { name: "rock3", qty: 2, spec: 0.2, rough: 1, collider: 10 },
-        { name: "smallrock", qty: 15, spec: 0.5, rough: 1, collider: 1 },
-        { name: "stump", qty: 20, spec: 0.05, rough: 1, collider: 1 },
-        { name: "tree1", qty: 30, spec: 0.2, rough: 1, collider: 2 },
-        { name: "tree2", qty: 20, spec: 0.3, rough: 1, collider: 2 },
-        { name: "tree3", qty: 20, spec: 0.05, rough: 1, collider: 2 },
-        { name: "tree4", qty: 20, spec: 0.1, rough: 1, collider: 2 }];
+        { name: "flower", qty: 100, spec: 0.1, rough: 0.7, collider: 0 },
+        { name: "plant", qty: 60, spec: 0.4, rough: 0.7, collider: 0 },
+        { name: "rock1", qty: 4, spec: 0.2, rough: 1, collider: 6 },
+        { name: "rock2", qty: 4, spec: 0.2, rough: 1, collider: 6 },
+        { name: "rock3", qty: 4, spec: 0.2, rough: 1, collider: 6 },
+        { name: "smallrock", qty: 30, spec: 0.5, rough: 1, collider: 3 },
+        { name: "stump", qty: 20, spec: 0.05, rough: 1, collider: 3 },
+        { name: "tree1", qty: 40, spec: 0.2, rough: 1, collider: 3 },
+        { name: "tree2", qty: 40, spec: 0.3, rough: 1, collider: 3 },
+        { name: "tree3", qty: 40, spec: 0.05, rough: 1, collider: 3 },
+        { name: "tree4", qty: 40, spec: 0.1, rough: 1, collider: 3 }];
 
     // grass
     let grassLevel = new SceneGraphNode(null, "grassLevel");
     grassLevel.setParent(root);
     let grass = new Entity(objFileDir + 'grass.obj', render.shader, 0, 1, [0, 1, 0.3]);
     await grass.create();
+
     let grassNode = new SceneGraphNode(grass, "grass");
     grassNode.setParent(root);
-    mov.initLocalPosition(grassNode, 0, 0, 0, 0, 0, 0, 5);
+    grassNode.setLocalMatrix(utils.MakeWorld(0, 0, 0, 0, 0, 0, 10));
     // trees, rocks...
     for (const { name, qty, spec, rough, collider } of objectProperties) {
         let obj = new Entity(objFileDir + name + ".obj", render.shader, spec, rough, [1, 1, 1]);
@@ -123,7 +125,13 @@ async function getForest(root: SceneGraphNode) {
             else
                 node = new SceneGraphNode(obj, name + i);
             node.setParent(grassLevel);
-            do { mov.initRandomLocalPosition(node); } while (node.hasCollider() && node.collider.colliding(playerCollider) && playerCollider.colliding(node.collider) && node.collider.collidingAny(root));
+            do {
+                mov.initRandomLocalPosition(node);
+            } while (
+                node.hasCollider() && (
+                    node.collider.colliding(playerCollider) ||
+                    playerCollider.colliding(node.collider) ||
+                    node.collider.collidingAny(root)));
         }
     }
     root.updateWorldMatrix();
@@ -135,7 +143,8 @@ async function setupEnvironment() {
     sky = new Skybox('./assets/skyboxes/', gl, skyboxProgram,
         'posx.jpg', 'negx.jpg', 'negy.jpg', 'posy.jpg', 'posz.jpg', 'negz.jpg');
 
-    playerCollider = new SphereCollider(3);
+    playerCollider = new SphereCollider(1);
+    playerCollider.setLocation([0, 0, 0]);
     // Create the scene graph
     let root = new SceneGraphNode(null, "root");
     await getBirb(root);
@@ -197,6 +206,7 @@ function drawScene(root: SceneGraphNode) {
     });
     // move birb
     birbHandle.randomWalk(deltaT, VPmatrix);
+    root.updateWorldMatrix()
     // check if there was a collider violation
     camera.updateLastValidPosition(playerCollider, root);
     // draw scene objects
@@ -209,5 +219,7 @@ function drawScene(root: SceneGraphNode) {
 
 
 function main() {
+    console.log("ready to draw");
+
     drawScene(root);
 }
