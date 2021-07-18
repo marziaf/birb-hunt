@@ -9,3 +9,7 @@ function howto() {
 function startMenu() {
     window.location.href = "http://127.0.0.1/birb_hunt/ui/start_menu.html"
 }
+
+function win() {
+    window.location.href = "http://127.0.0.1/birb_hunt/ui/end.html"
+}

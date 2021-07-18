@@ -24,10 +24,10 @@ var root: SceneGraphNode;
 var VPmatrix: Array<number>;
 var Vmatrix: Array<number>;
 
-var playerCollider: SphereCollider;
-
 var render: { shader: Shader, lights: Array<Light>, texture: Texture };
 
+var playerCollider: SphereCollider;
+var nestCollider: SphereCollider;
 var birbHandle: Birb;
 let objFileDir = "../assets/scene_objects/";
 let shaderDir = "http://127.0.0.1:80/birb_hunt/code/shaders/";
@@ -79,7 +79,8 @@ async function getBirb(root: SceneGraphNode) {
 
     let birbNestLevel = new SceneGraphNode(null, "birbNestLevel");
     birbNestLevel.setParent(root);
-    let nestNode = new SceneGraphNode(birbNest, "nest", new SphereCollider(2.5));
+    nestCollider = new SphereCollider(2.5);
+    let nestNode = new SceneGraphNode(birbNest, "nest", nestCollider);
     nestNode.setParent(birbNestLevel);
     let birbLevel = new SceneGraphNode(null, "birbLevel");
     birbLevel.setParent(birbNestLevel);
@@ -211,6 +212,13 @@ function drawScene(root: SceneGraphNode) {
     camera.updateLastValidPosition(playerCollider, root);
     // draw scene objects
     drawGraph(root);
+
+    // check if the player reached the birb
+    if (nestCollider.colliding(playerCollider)) {
+        window.location.href = "http://127.0.0.1/birb_hunt/ui/end.html"
+        console.log("victory");
+        nestCollider = null;
+    }
 
     //loop
     window.requestAnimationFrame(() => drawScene(root));
