@@ -79,7 +79,7 @@ async function getBirb(root: SceneGraphNode) {
 
     let birbNestLevel = new SceneGraphNode(null, "birbNestLevel");
     birbNestLevel.setParent(root);
-    let nestNode = new SceneGraphNode(birbNest, "nest", new SphereCollider(4));
+    let nestNode = new SceneGraphNode(birbNest, "nest", new SphereCollider(2.5));
     nestNode.setParent(birbNestLevel);
     let birbLevel = new SceneGraphNode(null, "birbLevel");
     birbLevel.setParent(birbNestLevel);
@@ -94,15 +94,15 @@ async function getForest(root: SceneGraphNode) {
     let objectProperties = [
         { name: "flower", qty: 100, spec: 0.1, rough: 0.7, collider: 0 },
         { name: "plant", qty: 60, spec: 0.4, rough: 0.7, collider: 0 },
-        { name: "rock1", qty: 4, spec: 0.2, rough: 1, collider: 6 },
-        { name: "rock2", qty: 4, spec: 0.2, rough: 1, collider: 6 },
-        { name: "rock3", qty: 4, spec: 0.2, rough: 1, collider: 6 },
-        { name: "smallrock", qty: 30, spec: 0.5, rough: 1, collider: 3 },
-        { name: "stump", qty: 20, spec: 0.05, rough: 1, collider: 3 },
-        { name: "tree1", qty: 40, spec: 0.2, rough: 1, collider: 3 },
-        { name: "tree2", qty: 40, spec: 0.3, rough: 1, collider: 3 },
-        { name: "tree3", qty: 40, spec: 0.05, rough: 1, collider: 3 },
-        { name: "tree4", qty: 40, spec: 0.1, rough: 1, collider: 3 }];
+        { name: "rock1", qty: 4, spec: 0.2, rough: 1, collider: 5 },
+        { name: "rock2", qty: 4, spec: 0.2, rough: 1, collider: 5 },
+        { name: "rock3", qty: 4, spec: 0.2, rough: 1, collider: 5 },
+        { name: "smallrock", qty: 30, spec: 0.5, rough: 1, collider: 2.5 },
+        { name: "stump", qty: 20, spec: 0.05, rough: 1, collider: 2.5 },
+        { name: "tree1", qty: 40, spec: 0.2, rough: 1, collider: 2.5 },
+        { name: "tree2", qty: 40, spec: 0.3, rough: 1, collider: 2.5 },
+        { name: "tree3", qty: 40, spec: 0.05, rough: 1, collider: 2.5 },
+        { name: "tree4", qty: 40, spec: 0.1, rough: 1, collider: 2.5 }];
 
     // grass
     let grassLevel = new SceneGraphNode(null, "grassLevel");
@@ -206,7 +206,7 @@ function drawScene(root: SceneGraphNode) {
     });
     // move birb
     birbHandle.randomWalk(deltaT, VPmatrix);
-    root.updateWorldMatrix()
+    root.updateWorldMatrix();
     // check if there was a collider violation
     camera.updateLastValidPosition(playerCollider, root);
     // draw scene objects
