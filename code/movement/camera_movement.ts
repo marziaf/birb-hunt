@@ -19,7 +19,7 @@ class Camera {
     private _perspectiveMatrix: Array<number>;
 
 
-    constructor(canvas: HTMLCanvasElement, private root: SceneGraphNode, height: number = 2, translationSpeed: number = 25, rotationSpeed = { x: 30, y: 30 }) {
+    constructor(canvas: HTMLCanvasElement, private root: SceneGraphNode, height: number = 2, translationSpeed: number = 10, rotationSpeed = { x: 30, y: 30 }) {
         this._canvas = canvas;
         this._translationSpeed = translationSpeed;
         this._rotationSpeed = rotationSpeed;
@@ -37,6 +37,9 @@ class Camera {
         this._perspectiveMatrix = utils.MakePerspective(fovy, aspectRatio, nearPlane, farPlane);
     }
 
+    private _anyKeyPressed() {
+        return this._keyState['ArrowDown'] || this._keyState['s'] || this._keyState['ArrowUp'] || this._keyState['w'] || this._keyState['ArrowRight'] || this._keyState['d'] || this._keyState['ArrowLeft'] || this._keyState['a'];
+    }
     /**
      * Deal with key press and muose movement
      */
@@ -44,8 +47,10 @@ class Camera {
         this._canvas.onclick = this._canvas.requestPointerLock;
 
         window.addEventListener("keydown", (e) => {
+            let wasKeyPressed = this._anyKeyPressed();
+            console.log("Was pressed", wasKeyPressed);
             this._keyState[e.key] = true;
-            this._keyFunction();
+            if (!wasKeyPressed) this._scheduleKeyPressed();
         });
         window.addEventListener("keyup", (e) => {
             this._keyState[e.key] = false;
@@ -62,6 +67,15 @@ class Camera {
             // Clamp elevation
             this._angles.elevation = Math.max(this._elevationBoundaries.low, Math.min(this._angles.elevation + deltaRotation.y, this._elevationBoundaries.high));
         }
+    }
+
+    private _scheduleKeyPressed() {
+        if (!this._anyKeyPressed()) return;
+        this._keyFunction();
+
+        window.requestAnimationFrame(() => {
+            this._scheduleKeyPressed();
+        });
     }
 
     /**
